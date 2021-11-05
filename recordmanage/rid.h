@@ -10,14 +10,14 @@ class RID{
 	int keyStart; //主键起始位置
 	int keyEnd; //主键结束位置
 public:
-	Rid(int pageID, int keyStart, int keyEnd){
-		this->pageID = pageId;
+	RID(int pageID, int keyStart, int keyEnd){
+		this->pageID = pageID;
 		this->keyStart = keyStart;
 		this->keyEnd = keyEnd;
 	}
-	Rid(int pageID, int slotID, int keyStart, int keyEnd){
-		this->pageID = pageId;
-		this->slotID = slotId;
+	RID(int pageID, int slotID, int keyStart, int keyEnd){
+		this->pageID = pageID;
+		this->slotID = slotID;
 		this->keyStart = keyStart;
 		this->keyEnd = keyEnd;
 	}
