@@ -1,8 +1,12 @@
 #pragma once
 #include "../utils/returncode.h"
+#include "../bufmanager/BufPageManager.h"
 #include "rid.h"
 
 class RecordHandler {
+	FileManager *fm;
+	BufPageManager *bpm;
+	int curFileID;
 public:
 	RecordHandler ();                     // 构造函数
 	~RecordHandler ();                     // 析构函数
