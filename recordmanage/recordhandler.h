@@ -19,7 +19,8 @@ public:
 	RC CreateFile(const char *fileName); // 创建文件
 	RC DestroyFile(const char *fileName); // 删除文件
 	RC OpenFile(const char *fileName); // 通过缓存管理模块打开文件，并获取其句柄
-	RC CloseFile();                     // 关闭fileID对应文件
+	RC CloseFile(); // 关闭fileID对应文件
+	RC GetSlotNum(const int &pageID);
 	RC GetRecordBySlotID(const RID &rid, char *&pData);
 	RC GetRecordGreaterThan(const RID &rid, const int &key, char *&pData);
 	RC GetRecordLessThan(const RID &rid, const int &key, char *&pData);

@@ -41,11 +41,11 @@ int RecordHandler::RecordEndPos(char *b, int num){
 
 }
 
-RC RecordHandler::GetRecord(const RID &rid, char *&pData){
+RC RecordHandler::GetRecordBySlotID(const RID &rid, char *&pData){
     int index;
     char* b = (char *)(bpm->getPage(curFileID, rid.getPageID(), index));
     int slotNum = *((short*)(b + SLOT_NUM_OFFSET));
-    if()
+    if(rid.getSlotID() >= slotNum) return SLOT_ID_EXCEED;
     //b += PAGE_HEADER_SIZE;
     //int s = new 
 }
