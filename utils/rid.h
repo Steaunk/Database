@@ -16,11 +16,12 @@ public:
 		this->keyStart = keyStart;
 		this->keyEnd = keyEnd;
 	}
-	RID(int pageID, int slotID, int keyStart, int keyEnd){
+	RID(int pageID, int slotID, int keyStart, int keyEnd, int key = NULL){
 		this->pageID = pageID;
 		this->slotID = slotID;
 		this->keyStart = keyStart;
 		this->keyEnd = keyEnd;
+		this->key = key;
 	}
 	int getPageID() const {
 		return pageID;
