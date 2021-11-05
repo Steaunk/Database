@@ -4,20 +4,20 @@
 
 #define ASSERT(x) (assert(x))
 
-class Rid{
+class RID{
 	int pageID;
 	int slotID; //槽号暂未启用
 	int keyStart; //主键起始位置
 	int keyEnd; //主键结束位置
 public:
-	Rid(int pageId, int keyStart, int keyEnd){
-		this->pageId = pageId;
+	Rid(int pageID, int keyStart, int keyEnd){
+		this->pageID = pageId;
 		this->keyStart = keyStart;
 		this->keyEnd = keyEnd;
 	}
-	Rid(int pageId, int slotId, int keyStart, int keyEnd){
-		this->pageId = pageId;
-		this->slotId = slotId;
+	Rid(int pageID, int slotID, int keyStart, int keyEnd){
+		this->pageID = pageId;
+		this->slotID = slotId;
 		this->keyStart = keyStart;
 		this->keyEnd = keyEnd;
 	}
