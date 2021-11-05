@@ -6,9 +6,10 @@
 
 class RID{
 	int pageID;
-	int slotID; //槽号暂未启用
+	int slotID;
 	int keyStart; //主键起始位置
 	int keyEnd; //主键结束位置
+	int key; //主键值
 public:
 	RID(int pageID, int keyStart, int keyEnd){
 		this->pageID = pageID;
@@ -21,17 +22,17 @@ public:
 		this->keyStart = keyStart;
 		this->keyEnd = keyEnd;
 	}
-	int getPageID(){
+	int getPageID() const {
 		return pageID;
 	}
-	int getSlotID(){
-		ASSERT(false);
+	int getSlotID() const {
+		//ASSERT(false);
 		return slotID;
 	}
-	int getKeyStart(){
+	int getKeyStart() const {
 		return keyStart;
 	}	
-	int getKeyEnd(){
+	int getKeyEnd() const {
 		return keyEnd;
 	}
 };

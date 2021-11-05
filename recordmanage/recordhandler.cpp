@@ -17,6 +17,12 @@ RC RecordHandler::CreateFile(const char *filename){
     return ERROR;
 }
 
+RC RecordHandler::DestroyFile(const char *filename){
+    //bool result 
+    assert(false);
+    return ERROR;
+}
+
 RC RecordHandler::OpenFile(const char *filename){
     bool result = fm->openFile(filename, curFileID);
     if(result == true)
@@ -30,10 +36,21 @@ RC RecordHandler::CloseFile(){
         return SUCCESS;
     return ERROR;
 }
+//4 PageIndex|4 NextPage|4 PrevPage|2 SlotNum|
+int RecordHandler::RecordEndPos(char *b, int num){
+
+}
 
 RC RecordHandler::GetRecord(const RID &rid, char *&pData){
-    
+    int index;
+    char* b = (char *)(bpm->getPage(curFileID, rid.getPageID(), index));
+    int slotNum = *((short*)(b + SLOT_NUM_OFFSET));
+    if()
+    //b += PAGE_HEADER_SIZE;
+    //int s = new 
 }
+
+RC RecordHandler::Get
 
 RC RecordHandler::DeleteRecord(const RID &rid){
 
