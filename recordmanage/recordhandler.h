@@ -12,21 +12,18 @@ class RecordHandler {
 	BufPageManager *bpm;
 	int curFileID;
 
-	int RecordEndPos(char *b, int num);
+	RC getRecordPos(char *src, int slotID, char *dest);
 public:
 	RecordHandler ();                     // 构造函数
 	~RecordHandler ();                     // 析构函数
-	RC CreateFile(const char *fileName); // 创建文件
-	RC DestroyFile(const char *fileName); // 删除文件
-	RC OpenFile(const char *fileName); // 通过缓存管理模块打开文件，并获取其句柄
-	RC CloseFile(); // 关闭fileID对应文件
-	RC GetSlotNum(const int &pageID);
-	RC GetRecordBySlotID(const RID &rid, char *&pData);
-	RC GetRecordGreaterThan(const RID &rid, const int &key, char *&pData);
-	RC GetRecordLessThan(const RID &rid, const int &key, char *&pData);
+	RC createFile(const char *fileName); // 创建文件
+	RC destroyFile(const char *fileName); // 删除文件
+	RC openFile(const char *fileName); // 通过缓存管理模块打开文件，并获取其句柄
+	RC closeFile(); // 关闭fileID对应文件
+	RC getRecord(const RID &rid, char *&pData);
 				      // 通过页号和槽号访问记录后，相应字节序列可以通过pData访问
-	RC DeleteRecord(const RID &rid);       // 删除特定记录
-	RC InsertRecord(const RID &rid, const char *pData);
-	RC UpdateRecord(const RID &rid, const char *pData);
+	RC deleteRecord(const RID &rid);       // 删除特定记录
+	RC insertRecord(RID &rid, const char *pData);
+	RC updateRecord(const RID &rid, const char *pData);
                                               // 将特定位置记录更新为字节序列pData
 };
