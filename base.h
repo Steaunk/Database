@@ -33,6 +33,8 @@ typedef int RC;
 #define START_RM_ERR  (-101)
 #define RM_RECORD_SIZE_TOO_LARGE (-102)
 #define RM_RECORD_DELETED (-103)
+#define RM_NO_FREE_SLOT (-104)
+#define RM_INVALID_RID (-105)
 #define END_RM_ERR    (-200)
 #define START_IX_ERR  (-201)
 #define END_IX_ERR    (-300)

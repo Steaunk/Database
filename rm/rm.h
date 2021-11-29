@@ -52,6 +52,22 @@ class RM_FileHandle {
     RM_FileHeader rmFileHeader;
     PF_FileHandle pfFileHandle;
     bool isHeaderModified;
+
+    int FindZero(char value) const; //找到一个字节中的第一个0所在位置，其中-1位无。
+
+    RC GetDataBySlotNum(const PF_PageHandle &, const SlotNum &, char *&) const;
+
+    RC AllocatePage(PF_PageHandle &, PageNum &);
+
+    RC GetFreeSlot(const PF_PageHandle &, char *&) const;
+
+    RC GetPageHeaderAndData(const PF_PageHandle &, RM_PageHeader *&, char *&);
+
+    RC GetPageHeader(const PF_PageHandle &, RM_PageHeader *&) const;
+
+    RC GetSlot(const PF_PageHandle &, const SlotNum &, RM_Slot &) const;
+
+    RC SetSlot(const PF_PageHandle &, const SlotNum &, const RM_Slot &);
 public:
     RM_FileHandle ();
     ~RM_FileHandle();

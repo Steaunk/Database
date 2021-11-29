@@ -23,6 +23,8 @@ RC RM_Manager::CreateFile(const char *fileName, int recordSize){
     fileHeader->pageNum = 1;
     fileHeader->nextFreePage = NO_FREE_PAGE;
     TRY(RM_FileHandle::GetRecordNumPerPage(fileHeader->recordNumPerPage, recordSize));
+    fileHeader->bitmapOffset = RM_PAGE_HEADER_SIZE;
+    fileHeader->bitmapSize = (fileHeader->recordNumPerPage * RM_SLOT_SIZE + 7) / 8;
     TRY(fileHandle.MarkDirty(pageNum));
     TRY(fileHandle.UnpinPage(pageNum));
     TRY(pfManager->CloseFile(fileHandle));

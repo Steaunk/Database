@@ -14,6 +14,88 @@ RM_FileHandle::~RM_FileHandle(){
     return &rmFileHeader;
 }*/
 
+RC RM_FileHandle::AllocatePage(PF_PageHandle &pageHandle, PageNum &pageNum){
+    TRY(pfFileHandle.AllocatePage(pageHandle));
+    TRY(pageHandle.GetPageNum(pageNum));
+    rmFileHeader.nextFreePage = pageNum;
+    RM_PageHeader *pageHeader;
+    char *data;
+    TRY(GetPageHeaderAndData(pageHandle, pageHeader, data));
+    pageHeader = (RM_PageHeader *) data;
+    pageHeader->nextFreePage = NO_FREE_PAGE;
+    pageHeader->recordNum = 0;
+
+    data += rmFileHeader.bitmapOffset;
+    memset(data, 0, rmFileHeader.bitmapSize);
+
+    return OK_RC;
+}
+
+RC RM_FileHandle::GetPageHeaderAndData(const PF_PageHandle &pageHandle, RM_PageHeader *&pageHeader, char *&data){
+    TRY(pageHandle.GetData(data));
+    pageHeader = (RM_PageHeader *) data;
+    return OK_RC;
+}
+
+RC RM_FileHandle::GetPageHeader(const PF_PageHandle & pageHandle, RM_PageHeader *&pageHeader) const{
+    char *data; 
+    TRY(pageHandle.GetData(data));
+    pageHeader = (RM_PageHeader *) data;
+
+    return OK_RC;
+}
+
+int RM_FileHandle::FindZero(char value) const{
+    if(value == 255) return -1;
+    return __builtin_ffs(~value) - 1;
+}
+
+RC RM_FileHandle::GetFreeSlot(const PF_PageHandle &pageHandle, char *&data) const {
+    char *cur_data;
+    TRY(pageHandle.GetData(cur_data));
+    cur_data += rmFileHeader.bitmapOffset;
+
+    for(int i = 0; i < rmFileHeader.bitmapSize; ++i){
+        int t = FindZero(*(cur_data + i));
+        if(t != -1 && i * 8 + t <= rmFileHeader.recordNumPerPage){
+            TRY(GetDataBySlotNum(pageHandle, SlotNum(i * 8 + t), data));
+            return OK_RC;
+        }
+
+    }
+
+    return RM_NO_FREE_SLOT;
+}
+
+RC RM_FileHandle::GetDataBySlotNum(const PF_PageHandle &pageHandle, const SlotNum &slotNum, char *&data) const{
+    TRY(pageHandle.GetData(data));
+    data += slotNum * rmFileHeader.recordSize + rmFileHeader.bitmapOffset + rmFileHeader.bitmapSize;
+    return OK_RC;
+}
+
+RC RM_FileHandle::GetSlot(const PF_PageHandle &pageHandle, const SlotNum &slotNum, RM_Slot &slot) const {
+    if(slotNum >= rmFileHeader.recordSize) return RM_INVALID_RID;
+    char *data;
+    TRY(pageHandle.GetData(data));
+    data += rmFileHeader.bitmapOffset + slotNum / 8;
+    slot = (*data >> (slotNum % 8)) & 1;
+    
+    return OK_RC;
+}
+
+RC RM_FileHandle::SetSlot(const PF_PageHandle &pageHandle, const SlotNum &slotNum, const RM_Slot &slot) {
+    if(slotNum >= rmFileHeader.recordSize) return RM_INVALID_RID;
+    char *data;
+    TRY(pageHandle.GetData(data));
+    data += rmFileHeader.bitmapOffset + slotNum / 8;
+    if(slot == true) *(data) |= 1 << (slotNum % 8);
+    else *(data) &= ~(1 << (slotNum % 8));
+    
+    return OK_RC;
+}
+
+
+
 void RM_FileHandle::CopyToFileHeader(const RM_FileHeader *fileHeader){
     memcpy(&rmFileHeader, fileHeader, RM_FILE_HEADER_SIZE);
 }
@@ -58,7 +140,7 @@ RC RM_FileHandle::GetRec(const RID &rid, RM_Record &rec) const {
 
     //RM_PageHeader pageHeader;
     char *data;
-    SAFE_TRY(GetDataBySlot(pageHandle, slotNum, data));
+    SAFE_TRY(GetDataBySlotNum(pageHandle, slotNum, data));
     rec.SetData(data);
     rec.SetRid(rid);
 
@@ -74,24 +156,24 @@ RC RM_FileHandle::InsertRec(const char *pData, RID &rid){
     //TRY(rid.GetPageNum(pageNum));
     SlotNum slotNum;
 
-    RM_PageHeader pageHeader;
+    RM_PageHeader *pageHeader;
 
     if(rmFileHeader.nextFreePage == NO_FREE_PAGE){
-        TRY(AllocatePage(pfFileHandle, pageNum));
+        TRY(AllocatePage(pageHandle, pageNum));
     }
     else {
         pageNum = rmFileHeader.nextFreePage;
         TRY(pfFileHandle.GetThisPage(pageNum, pageHandle));
     }
 
+    SAFE_TRY(GetPageHeader(pageHandle, pageHeader));
     char *data;
     SAFE_TRY(GetFreeSlot(pageHandle, data));
     memcpy(data, pData, rmFileHeader.recordSize);
 
-    SAFE_TRY(GetPageHeader(pageHandle, pageHeader));
-    pageHeader.recordNum += 1;
-    if(pageHeader.recordNum == rmFileHeader.recordNumPerPage){
-        rmFileHeader.nextFreePage = pageHeader.nextFreePage;
+    pageHeader->recordNum += 1;
+    if(pageHeader->recordNum == rmFileHeader.recordNumPerPage){
+        rmFileHeader.nextFreePage = pageHeader->nextFreePage;
     }
 
 safe_exit:
@@ -133,7 +215,7 @@ RC RM_FileHandle::DeleteRec(const RID &rid){
     TRY(rid.GetSlotNum(slotNum));
     PF_PageHandle pageHandle;
     TRY(pfFileHandle.GetThisPage(pageNum, pageHandle));
-    RM_PageHeader pageHeader;
+    RM_PageHeader *pageHeader;
     SAFE_TRY(GetPageHeader(pageHandle, pageHeader));
 
     RM_Slot slot;
@@ -146,12 +228,12 @@ RC RM_FileHandle::DeleteRec(const RID &rid){
     
     SAFE_TRY(SetSlot(pageHandle, slotNum, false)){
 
-    if(pageHeader.recordNum == rmFileHeader.recordNumPerPage){
-        pageHeader.nextFreePage = rmFileHeader.nextFreePage;
+    if(pageHeader->recordNum == rmFileHeader.recordNumPerPage){
+        pageHeader->nextFreePage = rmFileHeader.nextFreePage;
         rmFileHeader.nextFreePage = pageNum;
         isHeaderModified = true;
     }
-    pageHeader.recordNum -= 1;
+    pageHeader->recordNum -= 1;
 
 safe_exit:
     TRY(pfFileHandle.MarkDirty(pageNum));

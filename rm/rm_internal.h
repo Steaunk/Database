@@ -7,6 +7,8 @@ struct RM_FileHeader{
     int recordNumPerPage; //per page
     PageNum nextFreePage;
     int pageNum;
+    int bitmapOffset;
+    int bitmapSize;
 };
 
 struct RM_PageHeader{
