@@ -174,6 +174,7 @@ RC RM_FileHandle::InsertRec(const char *pData, RID &rid){
     pageHeader->recordNum += 1;
     if(pageHeader->recordNum == rmFileHeader.recordNumPerPage){
         rmFileHeader.nextFreePage = pageHeader->nextFreePage;
+        isHeaderModified = true;
     }
 
 safe_exit:
