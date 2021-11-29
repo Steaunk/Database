@@ -39,6 +39,10 @@ public:
 
     // Return the RID associated with the record
     RC GetRid (RID &rid) const;
+
+    RC SetData(const char *pData);
+
+    RC SetRid(const RID &rid);
 };
 
 //

@@ -32,6 +32,7 @@ typedef int RC;
 #define END_PF_ERR    (-100)
 #define START_RM_ERR  (-101)
 #define RM_RECORD_SIZE_TOO_LARGE (-102)
+#define RM_RECORD_DELETED (-103)
 #define END_RM_ERR    (-200)
 #define START_IX_ERR  (-201)
 #define END_IX_ERR    (-300)
@@ -52,6 +53,9 @@ typedef int RC;
 #define END_QL_WARN    500
 
 #define TRY(func) { RC rc = func; if(rc != OK_RC) return rc; }
+
+// SAFE_TRY 需要定义 RC rc 和 标签 safe_exit
+#define SAFE_TRY(func) { rc = func; if(rc != OK_RC) goto safe_exit; } 
 
 // ALL_PAGES is defined and used by the ForcePages method defined in RM
 // and PF layers

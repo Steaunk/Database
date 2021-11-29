@@ -21,7 +21,7 @@ RC RM_Manager::CreateFile(const char *fileName, int recordSize){
     RM_FileHeader *fileHeader = (RM_FileHeader *) data;
     fileHeader->recordSize = recordSize;
     fileHeader->pageNum = 1;
-    fileHeader->nextFreePage = -1;
+    fileHeader->nextFreePage = NO_FREE_PAGE;
     TRY(RM_FileHandle::GetRecordNumPerPage(fileHeader->recordNumPerPage, recordSize));
     TRY(fileHandle.MarkDirty(pageNum));
     TRY(fileHandle.UnpinPage(pageNum));

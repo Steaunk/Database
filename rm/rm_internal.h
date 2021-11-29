@@ -1,5 +1,6 @@
 #pragma once
 #include "rm.h"
+#include <cassert>
 
 struct RM_FileHeader{
     int recordSize;
@@ -10,10 +11,20 @@ struct RM_FileHeader{
 
 struct RM_PageHeader{
     int recordNum;
-    PageNum nextPage;
+    PageNum nextFreePage;
 };
+
+/*struct RM_Slot{
+    char 
+}*/
+
+typedef bool RM_Slot;
 
 #define RM_FILE_HEADER_SIZE sizeof(RM_FileHeader)
 #define RM_PAGE_HEADER_SIZE sizeof(RM_PageHeader)
 
-#define RM_SLOT_SIZE 2
+#define RM_SLOT_SIZE 1 //sizeof(RM_Slot)
+
+#define NO_FREE_PAGE -1
+
+#define ASSERT(condition) assert(condition)
