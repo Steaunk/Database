@@ -45,9 +45,24 @@ public:
 // RM_FileHandle: RM File interface
 //
 class RM_FileHandle {
+    RM_FileHeader rmFileHeader;
+    PF_FileHandle pfFileHandle;
+    bool isHeaderModified;
 public:
     RM_FileHandle ();
     ~RM_FileHandle();
+
+    RM_FileHeader* GetFileHeaderPointer();
+
+    PF_FileHandle GetFileHandle() const;
+
+    bool IsHeaderModified() const;
+
+    void InitSetting();
+
+    void SetFileHandle(const PF_FileHandle &pfFileHandle);   //Set PF_FileHandle
+
+    static RC GetRecordNumPerPage(int &recordNumPerPage, int recordSize);
 
     // Given a RID, return the record
     RC GetRec     (const RID &rid, RM_Record &rec) const;
@@ -85,7 +100,7 @@ public:
 // RM_Manager: provides RM file management
 //
 class RM_Manager {
-    PF_Manager pfManager;
+    PF_Manager *pfManager;
 public:
     RM_Manager    (PF_Manager &pfm);
     ~RM_Manager   ();

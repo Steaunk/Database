@@ -31,6 +31,7 @@ typedef int RC;
 #define START_PF_ERR  (-1)
 #define END_PF_ERR    (-100)
 #define START_RM_ERR  (-101)
+#define RM_RECORD_SIZE_TOO_LARGE (-102)
 #define END_RM_ERR    (-200)
 #define START_IX_ERR  (-201)
 #define END_IX_ERR    (-300)
