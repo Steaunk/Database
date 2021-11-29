@@ -1,5 +1,6 @@
 #include "rm.h"
 #include "rm_internal.h"
+#include <cstring>
 
 RM_FileHandle::RM_FileHandle(){
 
@@ -9,8 +10,16 @@ RM_FileHandle::~RM_FileHandle(){
 
 }
 
-RM_FileHeader* RM_FileHandle::GetFileHeaderPointer(){
+/*RM_FileHeader* RM_FileHandle::GetFileHeaderPointer(){
     return &rmFileHeader;
+}*/
+
+void RM_FileHandle::CopyToFileHeader(const RM_FileHeader *fileHeader){
+    memcpy(&rmFileHeader, fileHeader, RM_FILE_HEADER_SIZE);
+}
+
+void RM_FileHandle::CopyFromFileHeader(RM_FileHeader *fileHeader){
+    memcpy(fileHeader, &rmFileHeader, RM_FILE_HEADER_SIZE);
 }
 
 PF_FileHandle RM_FileHandle::GetFileHandle() const {

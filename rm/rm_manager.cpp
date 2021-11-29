@@ -43,10 +43,11 @@ RC RM_Manager::OpenFile(const char *fileName, RM_FileHandle &rmFileHandle){
     PageNum pageNum;
     TRY(pageHandle.GetPageNum(pageNum));
     RM_FileHeader *fileHeader = (RM_FileHeader *) data;
-    memcpy(rmFileHandle.GetFileHeaderPointer(), fileHeader, RM_FILE_HEADER_SIZE);
-    rmFileHandle.SetFileHandle(pfFileHandle);
+    rmFileHandle.CopyToFileHeader(fileHeader);
+    //memcpy(rmFileHandle.GetFileHeaderPointer(), fileHeader, RM_FILE_HEADER_SIZE);
 
     //可能还需要对 RM_FileHandle 进行一些配置
+    rmFileHandle.SetFileHandle(pfFileHandle);
     rmFileHandle.InitSetting();
     //TO-DO
 
@@ -64,7 +65,8 @@ RC RM_Manager::CloseFile(RM_FileHandle &fileHandle){
         char *data;
         TRY(pageHandle.GetData(data));
         RM_FileHeader *fileHeader = (RM_FileHeader *) data;
-        memcpy(fileHeader, fileHandle.GetFileHeaderPointer(), RM_FILE_HEADER_SIZE);
+        fileHandle.CopyFromFileHeader(fileHeader);
+        //memcpy(fileHeader, fileHandle.GetFileHeaderPointer(), RM_FILE_HEADER_SIZE);
         pfFileHandle.MarkDirty(pageNum);
         pfFileHandle.UnpinPage(pageNum);
     }    

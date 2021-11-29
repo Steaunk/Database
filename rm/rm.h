@@ -52,7 +52,11 @@ public:
     RM_FileHandle ();
     ~RM_FileHandle();
 
-    RM_FileHeader* GetFileHeaderPointer();
+    //RM_FileHeader* GetFileHeaderPointer();
+
+    void CopyToFileHeader(const RM_FileHeader *fileHeader);
+    
+    void CopyFromFileHeader(RM_FileHeader *fileHeader);
 
     PF_FileHandle GetFileHandle() const;
 
