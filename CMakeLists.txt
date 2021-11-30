@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 project(Database)
 
-ADD_DEFINITIONS("-Wall -Werror -Wstrict-prototypes -Wmissing-prototypes")
+ADD_DEFINITIONS("-Wall -Werror -Wstrict-prototypes -Wmissing-prototypes -O2")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
