@@ -46,7 +46,7 @@ RC RM_FileHandle::GetPageHeader(const PF_PageHandle & pageHandle, RM_PageHeader 
 }
 
 int RM_FileHandle::FindZero(char value) const{
-    if(value == 255) return -1;
+    if((int)value == 255) return -1;
     return __builtin_ffs(~value) - 1;
 }
 
@@ -154,7 +154,6 @@ RC RM_FileHandle::InsertRec(const char *pData, RID &rid){
     PageNum pageNum;
     PF_PageHandle pageHandle;
     //TRY(rid.GetPageNum(pageNum));
-    SlotNum slotNum;
 
     RM_PageHeader *pageHeader;
 
@@ -227,7 +226,7 @@ RC RM_FileHandle::DeleteRec(const RID &rid){
         goto safe_exit;
     }
     
-    SAFE_TRY(SetSlot(pageHandle, slotNum, false)){
+    SAFE_TRY(SetSlot(pageHandle, slotNum, false))
 
     if(pageHeader->recordNum == rmFileHeader.recordNumPerPage){
         pageHeader->nextFreePage = rmFileHeader.nextFreePage;
@@ -244,7 +243,7 @@ safe_exit:
 
 
 
-RC RM_FileHandle::ForcePages(PageNum pageNum = ALL_PAGES){
+RC RM_FileHandle::ForcePages(PageNum pageNum){
     if(pageNum == ALL_PAGES) ASSERT(false); //TO-DO
 
     TRY(pfFileHandle.ForcePages(pageNum));    

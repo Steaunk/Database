@@ -12,7 +12,7 @@ RM_Record::~RM_Record(){
 }
 
 RC RM_Record::GetData(char *&pData) const {
-    ASSERT(this->pData == nullptr)
+    ASSERT(this->pData == nullptr);
     pData = this->pData;
     return OK_RC;
 }
@@ -22,12 +22,12 @@ RC RM_Record::GetRid(RID &rid) const {
     return OK_RC;
 }
 
-RC RM_Record::SetData(const char *&pData){
+RC RM_Record::SetData(char * const &pData){
     this->pData = pData;
     return OK_RC;
 }
 
-RC RM_Record::SetRid(const Rid &rid){
+RC RM_Record::SetRid(const RID &rid){
     this->rid = rid;
     return OK_RC;
 }

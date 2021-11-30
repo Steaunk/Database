@@ -20,6 +20,7 @@
 // Do not change the following includes
 #include "../base.h"
 #include "rm_rid.h"
+#include "rm_internal.h"
 #include "../pf/pf.h"
 
 //
@@ -40,7 +41,7 @@ public:
     // Return the RID associated with the record
     RC GetRid (RID &rid) const;
 
-    RC SetData(const char *pData);
+    RC SetData(char * const &pData);
 
     RC SetRid(const RID &rid);
 };

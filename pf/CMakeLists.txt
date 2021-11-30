@@ -2,7 +2,6 @@ set(HEADER
         ${HEADER}
         ${CMAKE_CURRENT_SOURCE_DIR}/pf_buffermgr.h
         ${CMAKE_CURRENT_SOURCE_DIR}/pf_hashtable.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/pf_manager.h
         ${CMAKE_CURRENT_SOURCE_DIR}/pf_internal.h
         ${CMAKE_CURRENT_SOURCE_DIR}/pf.h)
 set(SOURCE
@@ -11,7 +10,7 @@ set(SOURCE
         ${CMAKE_CURRENT_SOURCE_DIR}/pf_error.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/pf_filehandle.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/pf_hashtable.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/pf_manager.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/pf_manager.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/pf_pagehandle.cpp)
 add_library(pf ${HEADER} ${SOURCE})
 #add_executable(pf_test test1.cpp ${HEADER} ${SOURCE})

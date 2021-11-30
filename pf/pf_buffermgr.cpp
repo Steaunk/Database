@@ -329,7 +329,7 @@ RC PF_BufferMgr::MarkDirty(int fd, PageNum pageNum)
 
    // The page must be found and pinned in the buffer
    if ((rc = hashTable.Find(fd, pageNum, slot))){
-      if ((rc == PF_HASHNOTFOUND))
+      if (rc == PF_HASHNOTFOUND)
          return (PF_PAGENOTINBUF);
       else
          return (rc);              // unexpected error
@@ -365,7 +365,7 @@ RC PF_BufferMgr::UnpinPage(int fd, PageNum pageNum)
 
    // The page must be found and pinned in the buffer
    if ((rc = hashTable.Find(fd, pageNum, slot))){
-      if ((rc == PF_HASHNOTFOUND))
+      if (rc == PF_HASHNOTFOUND)
          return (PF_PAGENOTINBUF);
       else
          return (rc);              // unexpected error

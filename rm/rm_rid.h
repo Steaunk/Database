@@ -28,7 +28,7 @@ typedef int SlotNum;
 class RID {
 public:
     RID();                                         // Default constructor
-    RID(PageNum pageNum, SlotNum slotNum);
+    RID(const PageNum &pageNum, const SlotNum &slotNum);
     ~RID();                                        // Destructor
 
     RC GetPageNum(PageNum &pageNum) const;         // Return page number

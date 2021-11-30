@@ -2,7 +2,7 @@
 
 RID::RID(){}
 
-RID::RID(PageNum pageNum, SlotNum SlotNum): pageNum(pageNum), slotNum(slotNum){
+RID::RID(const PageNum &pageNum, const SlotNum &slotNum): pageNum(pageNum), slotNum(slotNum){
 }
 
 RID::~RID(){}
