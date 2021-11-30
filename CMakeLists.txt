@@ -13,9 +13,10 @@ set(HEADER
 
 add_subdirectory(pf)
 add_subdirectory(rm)
+add_subdirectory(ix)
 
 add_executable(database main.cpp)
 
-target_link_libraries(database pf rm)
+target_link_libraries(database pf rm ix)
 
 

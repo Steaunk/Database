@@ -10,7 +10,7 @@ set(SOURCE
         ${CMAKE_CURRENT_SOURCE_DIR}/utils.cpp
 )
 
-add_library(rm ${HEADER} ${SOURCE})
+add_library(ix ${HEADER} ${SOURCE})
 #add_executable(pf_test test1.cpp ${HEADER} ${SOURCE})
 #add_executable(pf_TEST_2 test2.cpp ${HEADER} ${SOURCE})
 #add_executable(pf_TEST_3 test3.cpp ${HEADER} ${SOURCE})
