@@ -60,7 +60,7 @@ class RM_FileHandle {
 
     RC AllocatePage(PF_PageHandle &, PageNum &);
 
-    RC GetFreeSlot(const PF_PageHandle &, char *&) const;
+    RC GetFreeSlot(const PF_PageHandle &, SlotNum &, char *&) const;
 
     RC GetPageHeaderAndData(const PF_PageHandle &, RM_PageHeader *&, char *&);
 
