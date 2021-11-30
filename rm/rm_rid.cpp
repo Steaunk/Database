@@ -16,3 +16,9 @@ RC RID::GetSlotNum(SlotNum &slotNum) const {
     slotNum = this->slotNum;
     return OK_RC;
 }
+
+bool RID::operator == (const RID& rid) const {
+	PageNum pageNum; rid.GetPageNum(pageNum);
+	SlotNum slotNum; rid.GetSlotNum(slotNum);
+	return pageNum == this->pageNum && slotNum == this->slotNum;
+}
