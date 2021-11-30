@@ -72,7 +72,7 @@ class IX_IndexScan {
     SlotNum curslot;
     CompOp op;
     void *value;
-    bool notacc(PageNum,SlotNum);
+    bool notacc(PageNum&,SlotNum&);
     void next(PageNum,SlotNum);
   public:
        IX_IndexScan  ();                                 // Constructor

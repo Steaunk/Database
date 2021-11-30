@@ -74,8 +74,8 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &indexHandle, // Initialize index
     return OK_RC;                      
 }
 
-RC GetNextEntry (RID &rid){
-    if(curpage == lastpage && curslot == lastslot){
+RC IX_IndexScan::GetNextEntry (RID &rid){
+    if(curpage == 255){
         return IX_EOF;
     }
     if((op == LE_OP || op == LT_OP || op == EQ_OP) && notacc(curpage,curslot)){
@@ -85,6 +85,116 @@ RC GetNextEntry (RID &rid){
     next(curpage,curslot);
     while(op == NE_OP && notacc(curpage,curslot)){
         next(curpage,curslot);
+        if(curpage == 255)break;
     }
     return OK_RC;
+}
+
+void IX_IndexScan::next(PageNum &pagenum, SlotNum &slotnum){
+    slot += 1;
+    PF_PageHandle page;
+    file.GetThisPage(pagenum,page);
+    char *data;
+    page.GetData(data);
+    if(getsize(data) == slotnum){
+        pagenum = data[NEXT];
+        slotnum = 0;
+    }
+}
+
+void IX_IndexScan::notacc(PageNum pagenum,SlotNum slotnum){
+    PF_PageHandle page;
+    file.GetThisPage(pagenum,page);
+    char *data;
+    page.GetData(data);
+    void *qData;
+    int pos = slotnum * (length + 4);
+    qData = (void*)data + pos;
+    switch (type)
+    {
+        case INT:
+            /* code */
+            switch (op)
+            {
+                case EQ_OP:
+                    return *((int*)qData) != *((int*)value);
+                    break;
+                case NE_OP:
+                    return *((int*)qData) == *((int*)value);
+                    break;
+                case LE_OP:
+                    return *((int*)qData) > *((int*)value);
+                    break;
+                case LT_OP:
+                    return *((int*)qData) >= *((int*)value);
+                    break;
+                case GE_OP:
+                    return *((int*)qData) < *((int*)value);
+                    break;
+                case GT_OP:
+                    return *((int*)qData) <= *((int*)value);
+                    break;
+                
+                default:
+                    break;
+            }
+            break;
+        case FLOAT:
+            /* code */
+            switch (op)
+            {
+                case EQ_OP:
+                    return *((float*)qData) != *((float*)value);
+                    break;
+                case NE_OP:
+                    return *((float*)qData) == *((float*)value);
+                    break;
+                case LE_OP:
+                    return *((float*)qData) > *((float*)value);
+                    break;
+                case LT_OP:
+                    return *((float*)qData) >= *((float*)value);
+                    break;
+                case GE_OP:
+                    return *((float*)qData) < *((float*)value);
+                    break;
+                case GT_OP:
+                    return *((float*)qData) <= *((float*)value);
+                    break;
+                
+                default:
+                    break;
+            }
+            break;
+        case STRING:
+            /* code */
+            switch (op)
+            {
+                case EQ_OP:
+                    return strcmp(qData,value) != 0;
+                    break;
+                case NE_OP:
+                    return strcmp(qData,value) == 0;
+                    break;
+                case LE_OP:
+                    return strcmp(qData,value) > 0;
+                    break;
+                case LT_OP:
+                    return strcmp(qData,value) >= 0;
+                    break;
+                case GE_OP:
+                    return strcmp(qData,value) < 0;
+                    break;
+                case GT_OP:
+                    return strcmp(qData,value) <= 0;
+                    break;
+                
+                default:
+                    break;
+            }
+            break;
+        
+        default:
+            break;
+    }
 }
