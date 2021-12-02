@@ -12,7 +12,6 @@ RM_Manager::~RM_Manager(){}
 
 RC RM_Manager::CreateFile(const char *fileName, int recordSize){
     TRY(pfManager->CreateFile(fileName));
-    cout << "AFTER PF_Manager" << endl;
     PF_FileHandle fileHandle;
     TRY(pfManager->OpenFile(fileName, fileHandle));
     PF_PageHandle pageHandle;

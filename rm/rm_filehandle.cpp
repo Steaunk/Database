@@ -170,6 +170,7 @@ RC RM_FileHandle::InsertRec(const char *pData, RID &rid){
     char *data;
     SAFE_TRY(GetFreeSlot(pageHandle, slotNum, data));
     memcpy(data, pData, rmFileHeader.recordSize);
+    SAFE_TRY(SetSlot(pageHandle, slotNum, true));
 
     pageHeader->recordNum += 1;
     if(pageHeader->recordNum == rmFileHeader.recordNumPerPage){

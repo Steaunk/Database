@@ -50,6 +50,9 @@ public:
 // RM_FileHandle: RM File interface
 //
 class RM_FileHandle {
+
+    friend class RM_Manager;
+    
     RM_FileHeader rmFileHeader;
     PF_FileHandle pfFileHandle;
     bool isHeaderModified;
@@ -69,11 +72,6 @@ class RM_FileHandle {
     RC GetSlot(const PF_PageHandle &, const SlotNum &, RM_Slot &) const;
 
     RC SetSlot(const PF_PageHandle &, const SlotNum &, const RM_Slot &);
-public:
-    RM_FileHandle ();
-    ~RM_FileHandle();
-
-    //RM_FileHeader* GetFileHeaderPointer();
 
     void CopyToFileHeader(const RM_FileHeader *fileHeader);
     
@@ -89,7 +87,13 @@ public:
 
     static RC GetRecordNumPerPage(int &recordNumPerPage, int recordSize);
 
-    // Given a RID, return the record
+public:
+    RM_FileHandle ();
+    ~RM_FileHandle();
+
+    //RM_FileHeader* GetFileHeaderPointer();
+
+       // Given a RID, return the record
     RC GetRec     (const RID &rid, RM_Record &rec) const;
 
     RC InsertRec  (const char *pData, RID &rid);       // Insert a new record
