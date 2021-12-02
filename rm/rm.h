@@ -52,7 +52,7 @@ public:
 class RM_FileHandle {
 
     friend class RM_Manager;
-    
+
     RM_FileHeader rmFileHeader;
     PF_FileHandle pfFileHandle;
     bool isHeaderModified;
@@ -145,5 +145,14 @@ public:
 // Print-error function
 //
 void RM_PrintError(RC rc);
+
+// RM WARN
+#define RM_RECORD_DELETED (START_RM_WARN + 0) //record has already deleted
+#define RM_NO_FREE_SLOT (START_RM_WARN + 1) //record has already deleted
+#define RM_EOF (START_RM_WARN + 2)
+
+// RM ERR
+#define RM_RECORD_SIZE_TOO_LARGE (START_RM_ERR - 0) //record size is too large
+#define RM_INVALID_RID (START_RM_ERR - 1)
 
 #endif
