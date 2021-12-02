@@ -11,6 +11,7 @@ build
 ##ctest
 **/Testing
 **/*.sql
+**/CTestTestfile.cmake
 
 database
 
