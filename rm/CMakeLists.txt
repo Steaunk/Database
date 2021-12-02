@@ -13,11 +13,13 @@ set(SOURCE
         ${CMAKE_CURRENT_SOURCE_DIR}/rm_rid.cpp
 )
 
+set(CTEST_OUTPUT_ON_FAILURE True)
+
 add_library(rm ${HEADER} ${SOURCE})
-#add_executable(pf_test test1.cpp ${HEADER} ${SOURCE})
-#add_executable(pf_TEST_2 test2.cpp ${HEADER} ${SOURCE})
+add_executable(rm_test_1 rm_test1.cpp ${HEADER} ${SOURCE})
+#add_executable(rm_test_2 rm_test2.cpp ${HEADER} ${SOURCE})
 #add_executable(pf_TEST_3 test3.cpp ${HEADER} ${SOURCE})
-#target_link_libraries(pf_TEST_1 SP)
-#target_link_libraries(pf_TEST_2 SP)
-#target_link_libraries(pf_TEST_3 SP)
-#target_link_libraries(pf_TEST_4 SP)
+target_link_libraries(rm_test_1 pf)
+
+enable_testing()
+add_test(NAME rm_test COMMAND rm_test_1)

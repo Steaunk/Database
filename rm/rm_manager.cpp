@@ -1,6 +1,8 @@
 #include "rm.h"
 #include "rm_internal.h"
 #include <cstring>
+#include <iostream>
+using namespace std;
 
 RM_Manager::RM_Manager(PF_Manager &pfm){
     pfManager = &pfm;
@@ -10,6 +12,7 @@ RM_Manager::~RM_Manager(){}
 
 RC RM_Manager::CreateFile(const char *fileName, int recordSize){
     TRY(pfManager->CreateFile(fileName));
+    cout << "AFTER PF_Manager" << endl;
     PF_FileHandle fileHandle;
     TRY(pfManager->OpenFile(fileName, fileHandle));
     PF_PageHandle pageHandle;

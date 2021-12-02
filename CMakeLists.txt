@@ -5,7 +5,7 @@ project(Database)
 ADD_DEFINITIONS("-Wall -Werror -Wstrict-prototypes -Wmissing-prototypes -O2")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
-
+list(APPEND CMAKE_CTEST_ARGUMENTS "--output-on-failure")
 
 set(HEADER
 	${HEADER}
@@ -18,5 +18,7 @@ add_subdirectory(ix)
 add_executable(database main.cpp)
 
 target_link_libraries(database pf rm ix)
+
+enable_testing()
 
 
