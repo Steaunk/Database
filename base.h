@@ -107,4 +107,12 @@ typedef char Boolean;
 #define NULL 0
 #endif
 
+#ifdef DEBUG
+#define debug(str...) printf(str)
+#define IS_DEBUG true
+#else 
+#define debug(str...) (0)
+#define IS_DBBUG false
+#endif
+
 #endif
