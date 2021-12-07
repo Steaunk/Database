@@ -77,8 +77,6 @@ class RM_FileHandle {
     
     void CopyFromFileHeader(RM_FileHeader *fileHeader);
 
-    PF_FileHandle GetFileHandle() const;
-
     bool IsHeaderModified() const;
 
     void InitSetting();
@@ -91,7 +89,12 @@ public:
     RM_FileHandle ();
     ~RM_FileHandle();
 
+    PF_FileHandle GetFileHandle() const;
+
+    RM_FileHeader GetFileHeader() const;
+
     //RM_FileHeader* GetFileHeaderPointer();
+    RC GetNextRec(const RID &, RM_Record &) const;
 
        // Given a RID, return the record
     RC GetRec     (const RID &rid, RM_Record &rec) const;
@@ -110,6 +113,15 @@ public:
 // RM_FileScan: condition-based scan of records in the file
 //
 class RM_FileScan {
+    bool isOpen;
+    RM_FileHandle rmFileHandle;
+    CompOp compOp;
+    AttrType attrType;
+    int attrLength;
+    int attrOffset;
+    void *value;
+    PageNum curPageNum;
+    SlotNum curSlotNum;
 public:
     RM_FileScan  ();
     ~RM_FileScan ();
@@ -154,5 +166,6 @@ void RM_PrintError(RC rc);
 // RM ERR
 #define RM_RECORD_SIZE_TOO_LARGE (START_RM_ERR - 0) //record size is too large
 #define RM_INVALID_RID (START_RM_ERR - 1)
+#define RM_INVALID_SCAN (START_RM_ERR - 2)
 
 #endif

@@ -15,6 +15,10 @@ RM_FileHandle::~RM_FileHandle(){
     return &rmFileHeader;
 }*/
 
+RM_FileHeader RM_FileHandle::GetFileHeader() const{
+    return rmFileHeader;
+}
+
 RC RM_FileHandle::AllocatePage(PF_PageHandle &pageHandle, PageNum &pageNum){
     TRY(pfFileHandle.AllocatePage(pageHandle));
     TRY(pageHandle.GetPageNum(pageNum));
