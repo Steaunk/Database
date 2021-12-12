@@ -1,6 +1,7 @@
 #include "ix.h"
 #include <string>
 #include <cstring>
+#include <vector>
 
 // class IX_IndexScan {
 //   public:
@@ -14,13 +15,13 @@
 //     RC CloseScan     ();                                 // Terminate index scan
 // };
 
-IX_IndexScan::IX_IndexScan();
-IX_IndexScan::~IX_IndexScan();
+IX_IndexScan::IX_IndexScan(){}
+IX_IndexScan::~IX_IndexScan(){}
 
 RC IX_IndexScan::OpenScan(const IX_IndexHandle &indexHandle, // Initialize index scan
                       CompOp      compOp,
                       void        *value,
-                      ClientHint  pinHint = NO_HINT){
+                      ClientHint  pinHint){
     op = compOp;
     value = value;
     type = indexHandle.type;
@@ -43,9 +44,11 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &indexHandle, // Initialize index
                 cur = lower_bound_pos(data,value,type,length);
                 cur = *((int*)(data + cur * (length + 4) + length + DATA_HEADER_LENGTH));
             }
-            file.UnpinPage(page.GetPageNum());
+            PageNum pn;
+            page.GetPageNum(pn);
+            file.UnpinPage(pn);
         }
-        curpage = page.GetPageNum();
+        page.GetPageNum(curpage);
         curslot = lower_bound_pos(data,value,type,length);
     }
     if(compOp == GT_OP){
@@ -66,9 +69,11 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &indexHandle, // Initialize index
                 cur = upper_bound_pos(data,value,type,length);
                 cur = *((int*)(data + (cur-1) * (length + 4) + length + DATA_HEADER_LENGTH));
             }
-            file.UnpinPage(page.GetPageNum());
+            PageNum pn;
+            page.GetPageNum(pn);
+            file.UnpinPage(pn);
         }
-        curpage = page.GetPageNum();
+        page.GetPageNum(curpage);
         curslot = upper_bound_pos(data,value,type,length) - 1;
     }
     return OK_RC;                      
@@ -81,7 +86,7 @@ RC IX_IndexScan::GetNextEntry (RID &rid){
     if((op == LE_OP || op == LT_OP || op == EQ_OP) && notacc(curpage,curslot)){
         return IX_EOF;
     }
-    rid = getrid(curpage, curslot);
+    getrid(curpage, curslot, rid);
     next(curpage,curslot);
     while(op == NE_OP && notacc(curpage,curslot)){
         next(curpage,curslot);
@@ -90,8 +95,18 @@ RC IX_IndexScan::GetNextEntry (RID &rid){
     return OK_RC;
 }
 
+RC IX_IndexScan::getrid(const PageNum &PageNum, const SlotNum &slotnum, RID &rid){
+    PF_PageHandle page;
+    TRY(file.GetThisPage(PageNum,page));
+    char *data;
+    TRY(page.GetData(data));
+    int a = *((int*)(data + slotnum * (length + 8) + length)),
+    b = *((int*)(data + slotnum * (length + 8) + length + 4));
+    rid = RID(a,b);
+}
+
 void IX_IndexScan::next(PageNum &pagenum, SlotNum &slotnum){
-    slot += 1;
+    curslot += 1;
     PF_PageHandle page;
     file.GetThisPage(pagenum,page);
     char *data;
@@ -102,7 +117,7 @@ void IX_IndexScan::next(PageNum &pagenum, SlotNum &slotnum){
     }
 }
 
-void IX_IndexScan::notacc(PageNum pagenum,SlotNum slotnum){
+bool IX_IndexScan::notacc(const PageNum &pagenum,const SlotNum &slotnum){
     PF_PageHandle page;
     file.GetThisPage(pagenum,page);
     char *data;
@@ -171,22 +186,22 @@ void IX_IndexScan::notacc(PageNum pagenum,SlotNum slotnum){
             switch (op)
             {
                 case EQ_OP:
-                    return strcmp(qData,value) != 0;
+                    return strcmp((char*)qData,(char*)value) != 0;
                     break;
                 case NE_OP:
-                    return strcmp(qData,value) == 0;
+                    return strcmp((char*)qData,(char*)value) == 0;
                     break;
                 case LE_OP:
-                    return strcmp(qData,value) > 0;
+                    return strcmp((char*)qData,(char*)value) > 0;
                     break;
                 case LT_OP:
-                    return strcmp(qData,value) >= 0;
+                    return strcmp((char*)qData,(char*)value) >= 0;
                     break;
                 case GE_OP:
-                    return strcmp(qData,value) < 0;
+                    return strcmp((char*)qData,(char*)value) < 0;
                     break;
                 case GT_OP:
-                    return strcmp(qData,value) <= 0;
+                    return strcmp((char*)qData,(char*)value) <= 0;
                     break;
                 
                 default:

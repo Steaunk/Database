@@ -2,6 +2,7 @@
 #include "../pf/pf.h"
 #include "../rm/rm_rid.h"
 #include "../base.h"
+#include <utility>
 #define TYPE_POS 0
 #define LEN_POS 1
 #define ROOT_POS 2
@@ -11,12 +12,17 @@
 #define DATA_HEADER_LENGTH 6
 #define IX_EOF -1
 
+class IX_Manager;
+class IX_IndexHandle;
+class IX_IndexScan;
+
 
 /**
  * 管理索引的创建、销毁、使用等。
  * indexNo可以认为一个file中有多个索引，也可以用fileName.indexNo来创建不同文件。
 */
 class IX_Manager {
+  friend class IX_IndexHandle;
   private:
       PF_Manager *pfmp;
   public:
@@ -72,8 +78,9 @@ class IX_IndexScan {
     SlotNum curslot;
     CompOp op;
     void *value;
-    bool notacc(PageNum&,SlotNum&);
-    void next(PageNum,SlotNum);
+    bool notacc(const PageNum&,const SlotNum&);
+    void next(PageNum&,SlotNum&);
+    RC getrid(const PageNum&, const SlotNum&, RID&);
   public:
        IX_IndexScan  ();                                 // Constructor
        ~IX_IndexScan ();                                 // Destructor
@@ -88,7 +95,7 @@ class IX_IndexScan {
 int findpage(char *data, void *pData, AttrType type, int length);
 RID findrid(char *data, void *pData, AttrType type, int length);
 int findpos(char *data, void *pData, AttrType type, int length);
-int lower_bound_pos(char *data, void *pData, AttrType type, int length)
-int upper_bound_pos(char *data, void *pData, AttrType type, int length)
-inline void setsize(char *data, int size);
-inline void getsize(char *data);
+int lower_bound_pos(char *data, void *pData, AttrType type, int length);
+int upper_bound_pos(char *data, void *pData, AttrType type, int length);
+void setsize(char *data, int size);
+int getsize(char *data);

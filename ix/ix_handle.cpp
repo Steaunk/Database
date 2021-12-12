@@ -30,7 +30,7 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID &rid){
         if(data[IS_BOTTOM] == '1'){
             break;
         }else{
-            cur = find_data(data,pData,type,length);
+            cur = findpage(data,pData,type,length);
         }
     }
     for(int i = 0; i < nodes.size(); ++i){
@@ -52,7 +52,7 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID &rid){
                 }
                 else{
                     if(cur != root)
-                        son = split_add_page(cur,son.first,son.second)
+                        son = split_add_page(cur,son.first,son.second);
                     else
                         split_add_root_page(cur,son.first,son.second);
                 }
@@ -70,15 +70,16 @@ RC IX_IndexHandle::DeleteEntry(void *pData, const RID &rid){
     int root = data[ROOT_POS];
     int cur = root;
     while(true){
-        nodes.push_back(cur);
         TRY(file.GetThisPage(cur,page));
         TRY(page.GetData(data));
         if(data[IS_BOTTOM] == '1'){
             break;
         }else{
-            cur = find_data(data,pData,type,length);
+            cur = findpage(data,pData,type,length);
         }
-        file.UnpinPage(page.GetPageNum());
+        PageNum pn;
+        page.GetPageNum(pn);
+        file.UnpinPage(pn);
     }
     
     int len = getsize(data);
@@ -90,8 +91,9 @@ RC IX_IndexHandle::DeleteEntry(void *pData, const RID &rid){
                 data[pos+j] = data[pos+length+8+j];
             }
         }else{
-            int a = *((int*)(pos + length)),
-            b = *((int*)(pos + length + 4));
+            int ipos = pos;
+            int a = *((int*)(ipos + length)),
+            b = *((int*)(ipos + length + 4));
             if(RID(a,b) == rid){
                 f = 1;
                 for(int j = 0; j < length + 8; ++j){
@@ -101,8 +103,10 @@ RC IX_IndexHandle::DeleteEntry(void *pData, const RID &rid){
         }
     }
     setsize(data,len-1);
-    file.MarkDirty(page.GetPageNum());
-    file.UnpinPage(page.GetPageNum());
+    PageNum pn;
+    page.GetPageNum(pn);
+    file.MarkDirty(pn);
+    file.UnpinPage(pn);
     return OK_RC;
 }
 
@@ -116,7 +120,9 @@ bool IX_IndexHandle::is_full(PageNum cur){
     char *data;
     page.GetData(data);
     bool ans = strlen(data) + length + 10 < PF_PAGE_SIZE;
-    file.UnpinPage(page.GetPageNum());
+    PageNum pn;
+    page.GetPageNum(pn);
+    file.UnpinPage(pn);
     return ans;
 }
 
@@ -146,7 +152,7 @@ void IX_IndexHandle::add_page(PageNum cur, void *pData, PageNum son){
                 break;
             case STRING:
                 /* code */
-                if(strcmp(qData,pData) > 0){
+                if(strcmp((char*)qData,(char*)pData) > 0){
                    f=1;
                 }
                 break;
@@ -163,12 +169,14 @@ void IX_IndexHandle::add_page(PageNum cur, void *pData, PageNum son){
             data[pos + j + length + 4] = data[pos + j];
         }
     }
-    pos = k*(length+4) + DATA_HEADER_LENGTH;
+    int pos = k*(length+4) + DATA_HEADER_LENGTH;
     memcpy(data+pos,pData,(size_t)length);
     memcpy(data+pos+length,(void*)(&son),sizeof(PageNum));
     setsize(data,len+1);
-    file.MarkDirty(page.GetPageNum());
-    file.UnpinPage(page.GetPageNum());
+    PageNum pn;
+    page.GetPageNum(pn);
+    file.MarkDirty(pn);
+    file.UnpinPage(pn);
 }
 std::pair<void *,PageNum> IX_IndexHandle::split_add_page(PageNum cur, void *pData, PageNum son){
     PF_PageHandle page;
@@ -198,7 +206,7 @@ std::pair<void *,PageNum> IX_IndexHandle::split_add_page(PageNum cur, void *pDat
                 break;
             case STRING:
                 /* code */
-                if(strcmp(qData,pData) > 0){
+                if(strcmp((char*)qData,(char*)pData) > 0){
                    f=1;
                 }
                 break;
@@ -215,7 +223,7 @@ std::pair<void *,PageNum> IX_IndexHandle::split_add_page(PageNum cur, void *pDat
             data[pos + j + length + 4] = data[pos + j];
         }
     }
-    pos = k*(length+4) + DATA_HEADER_LENGTH;
+    int pos = k*(length+4) + DATA_HEADER_LENGTH;
     memcpy(data+pos,pData,(size_t)length);
     memcpy(data+pos+length,(void*)(&son),sizeof(PageNum));
 
@@ -225,18 +233,23 @@ std::pair<void *,PageNum> IX_IndexHandle::split_add_page(PageNum cur, void *pDat
     newpage.GetData(data2);
     data2[IS_BOTTOM] = data1[IS_BOTTOM];
     data2[NEXT] = data1[NEXT];
-    data1[NEXT] = (char)(newpage.GetPageNum());
+    PageNum nextpn;
+    newpage.GetPageNum(nextpn);
+    data1[NEXT] = (char)nextpn;
     memcpy(data1 + DATA_HEADER_LENGTH, data + DATA_HEADER_LENGTH, (size_t)(len/2 * (length + 4)));
     memcpy(data2 + DATA_HEADER_LENGTH, data + DATA_HEADER_LENGTH + len/2 * (length + 4), (size_t)((len+1-len/2) * (length + 4)));
     std::pair<void*,PageNum>a;
     a.first = data2 + DATA_HEADER_LENGTH;
-    a.second = newpage.GetPageNum();
+    newpage.GetPageNum(a.second);
     setsize(data1,len/2);
     setsize(data2,len+1-len/2);
-    file.MarkDirty(page.GetPageNum());
-    file.MarkDirty(newpage.GetPageNum());
-    file.UnpinPage(page.GetPageNum());
-    file.UnpinPage(newpage.GetPageNum());
+    PageNum pn,npn;
+    page.GetPageNum(pn);
+    newpage.GetPageNum(npn);
+    file.MarkDirty(pn);
+    file.MarkDirty(npn);
+    file.UnpinPage(pn);
+    file.UnpinPage(npn);
     return a;
 }
 void IX_IndexHandle::split_add_root_page(PageNum cur, void *pData, PageNum son){
@@ -267,7 +280,7 @@ void IX_IndexHandle::split_add_root_page(PageNum cur, void *pData, PageNum son){
                 break;
             case STRING:
                 /* code */
-                if(strcmp(qData,pData) > 0){
+                if(strcmp((char*)qData,(char*)pData) > 0){
                    f=1;
                 }
                 break;
@@ -284,7 +297,7 @@ void IX_IndexHandle::split_add_root_page(PageNum cur, void *pData, PageNum son){
             data[pos + j + length + 4] = data[pos + j];
         }
     }
-    pos = k*(length+4) + DATA_HEADER_LENGTH;
+    int pos = k*(length+4) + DATA_HEADER_LENGTH;
     memcpy(data+pos,pData,(size_t)length);
     memcpy(data+pos+length,(void*)(&son),sizeof(PageNum));
 
@@ -294,7 +307,9 @@ void IX_IndexHandle::split_add_root_page(PageNum cur, void *pData, PageNum son){
     newpage.GetData(data2);
     data2[IS_BOTTOM] = data1[IS_BOTTOM];
     data2[NEXT] = data1[NEXT];
-    data1[NEXT] = (char)(newpage.GetPageNum());
+    PageNum nextpn;
+    newpage.GetPageNum(nextpn);
+    data1[NEXT] = (char)nextpn;
     memcpy(data1 + DATA_HEADER_LENGTH, data + DATA_HEADER_LENGTH, (size_t)(len/2 * (length + 4)));
     memcpy(data2 + DATA_HEADER_LENGTH, data + DATA_HEADER_LENGTH + len/2 * (length + 4), (size_t)((len+1-len/2) * (length + 4)));
     setsize(data1,len/2);
@@ -307,25 +322,31 @@ void IX_IndexHandle::split_add_root_page(PageNum cur, void *pData, PageNum son){
     newrootdata[IS_BOTTOM] = '0';
     newrootdata[NEXT] = (char)255;
     setsize(newrootdata,2);
+    PageNum pn,npn,nrpn,fpn;
+    page.GetPageNum(pn);
+    newpage.GetPageNum(npn);
     memcpy(newrootdata+DATA_HEADER_LENGTH,data1+DATA_HEADER_LENGTH,(size_t)length);
-    memcpy(newrootdata+DATA_HEADER_LENGTH+length,(void*)(&(page.GetPageNum())),sizeof(PageNum));
+    memcpy(newrootdata+DATA_HEADER_LENGTH+length,(void*)(&(pn)),sizeof(PageNum));
     memcpy(newrootdata+DATA_HEADER_LENGTH+length+4,data2+DATA_HEADER_LENGTH,(size_t)length);
-    memcpy(newrootdata+DATA_HEADER_LENGTH+length+4+length,(void*)(&(newpage.GetPageNum())),sizeof(PageNum));
+    memcpy(newrootdata+DATA_HEADER_LENGTH+length+4+length,(void*)(&(npn)),sizeof(PageNum));
 
     PF_PageHandle firstpage;
     file.GetFirstPage(firstpage);
     char *sysdata;
     firstpage.GetData(sysdata);
-    sysdata[ROOT_POS] = (char) newrootpage.GetPageNum();
+    sysdata[ROOT_POS] = (char) npn;
 
-    file.MarkDirty(page.GetPageNum());
-    file.MarkDirty(newpage.GetPageNum());
-    file.MarkDirty(newrootpage.GetPageNum());
-    file.MarkDirty(firstpage.GetPageNum());
-    file.UnpinPage(page.GetPageNum());
-    file.UnpinPage(newpage.GetPageNum());
-    file.UnpinPage(newrootpage.GetPageNum());
-    file.UnpinPage(firstpage.GetPageNum());
+    newrootpage.GetPageNum(nrpn);
+    firstpage.GetPageNum(fpn);
+
+    file.MarkDirty(pn);
+    file.MarkDirty(npn);
+    file.MarkDirty(nrpn);
+    file.MarkDirty(fpn);
+    file.UnpinPage(pn);
+    file.UnpinPage(npn);
+    file.UnpinPage(nrpn);
+    file.UnpinPage(fpn);
 
 }
 void IX_IndexHandle::add_rid(PageNum cur, void *pData, const RID &rid){
@@ -354,7 +375,7 @@ void IX_IndexHandle::add_rid(PageNum cur, void *pData, const RID &rid){
                 break;
             case STRING:
                 /* code */
-                if(strcmp(qData,pData) > 0){
+                if(strcmp((char*)qData,(char*)pData) > 0){
                    f=1;
                 }
                 break;
@@ -371,12 +392,14 @@ void IX_IndexHandle::add_rid(PageNum cur, void *pData, const RID &rid){
             data[pos + j + length + 8] = data[pos + j];
         }
     }
-    pos = k*(length+8) + DATA_HEADER_LENGTH;
+    int pos = k*(length+8) + DATA_HEADER_LENGTH;
     memcpy(data+pos,pData,(size_t)length);
     memcpy(data+pos+length,(void*)(&rid),sizeof(RID));
     setsize(data,len+1);
-    file.MarkDirty(page.GetPageNum());
-    file.UnpinPage(page.GetPageNum());
+    PageNum pn;
+    page.GetPageNum(pn);
+    file.MarkDirty(pn);
+    file.UnpinPage(pn);
 }
 std::pair<void *,PageNum> IX_IndexHandle::split_add_rid(PageNum cur, void *pData, const RID &rid){
     file.MarkDirty(cur);
@@ -384,7 +407,7 @@ std::pair<void *,PageNum> IX_IndexHandle::split_add_rid(PageNum cur, void *pData
     file.GetThisPage(cur,page);
     char *data1;
     page.GetData(data1);
-    char *data;
+    char *data = new char[2*PF_PAGE_SIZE];
     strcpy(data,data1);
     int len = getsize(data);
     int k = 0;
@@ -407,7 +430,7 @@ std::pair<void *,PageNum> IX_IndexHandle::split_add_rid(PageNum cur, void *pData
                 break;
             case STRING:
                 /* code */
-                if(strcmp(qData,pData) > 0){
+                if(strcmp((char*)qData,(char*)pData) > 0){
                    f=1;
                 }
                 break;
@@ -424,7 +447,7 @@ std::pair<void *,PageNum> IX_IndexHandle::split_add_rid(PageNum cur, void *pData
             data[pos + j + length + 8] = data[pos + j];
         }
     }
-    pos = k*(length+8) + DATA_HEADER_LENGTH;
+    int pos = k*(length+8) + DATA_HEADER_LENGTH;
     memcpy(data+pos,pData,(size_t)length);
     memcpy(data+pos+length,(void*)(&rid),sizeof(RID));
 
@@ -434,18 +457,23 @@ std::pair<void *,PageNum> IX_IndexHandle::split_add_rid(PageNum cur, void *pData
     newpage.GetData(data2);
     data2[IS_BOTTOM] = data1[IS_BOTTOM];
     data2[NEXT] = data1[NEXT];
-    data1[NEXT] = (char)(newpage.GetPageNum());
+    PageNum nextpn;
+    newpage.GetPageNum(nextpn);
+    data1[NEXT] = (char)nextpn;
     memcpy(data1 + DATA_HEADER_LENGTH, data + DATA_HEADER_LENGTH, (size_t)(len/2 * (length + 8)));
     memcpy(data2 + DATA_HEADER_LENGTH, data + DATA_HEADER_LENGTH + len/2 * (length + 8), (size_t)((len+1-len/2) * (length + 8)));
     std::pair<void*,PageNum>a;
     a.first = data2 + DATA_HEADER_LENGTH;
-    a.second = newpage.GetPageNum();
+    newpage.GetPageNum(a.second);
     setsize(data1,len/2);
     setsize(data2,len+1-len/2);
-    file.MarkDirty(page.GetPageNum());
-    file.MarkDirty(newpage.GetPageNum());
-    file.UnpinPage(page.GetPageNum());
-    file.UnpinPage(newpage.GetPageNum());
+    PageNum pn,npn;
+    page.GetPageNum(pn);
+    newpage.GetPageNum(npn);
+    file.MarkDirty(pn);
+    file.MarkDirty(npn);
+    file.UnpinPage(pn);
+    file.UnpinPage(npn);
     return a;
 
 }
@@ -455,7 +483,7 @@ void IX_IndexHandle::split_add_root_rid(PageNum cur, void *pData, const RID &rid
     file.GetThisPage(cur,page);
     char *data1;
     page.GetData(data1);
-    char *data;
+    char *data = new char[2*PF_PAGE_SIZE];
     strcpy(data,data1);
     int len = getsize(data);
     int k = 0;
@@ -478,7 +506,7 @@ void IX_IndexHandle::split_add_root_rid(PageNum cur, void *pData, const RID &rid
                 break;
             case STRING:
                 /* code */
-                if(strcmp(qData,pData) > 0){
+                if(strcmp((char*)qData,(char*)pData) > 0){
                    f=1;
                 }
                 break;
@@ -495,7 +523,7 @@ void IX_IndexHandle::split_add_root_rid(PageNum cur, void *pData, const RID &rid
             data[pos + j + length + 8] = data[pos + j];
         }
     }
-    pos = k*(length+8) + DATA_HEADER_LENGTH;
+    int pos = k*(length+8) + DATA_HEADER_LENGTH;
     memcpy(data+pos,pData,(size_t)length);
     memcpy(data+pos+length,(void*)(&rid),sizeof(RID));
 
@@ -505,7 +533,9 @@ void IX_IndexHandle::split_add_root_rid(PageNum cur, void *pData, const RID &rid
     newpage.GetData(data2);
     data2[IS_BOTTOM] = data1[IS_BOTTOM];
     data2[NEXT] = data1[NEXT];
-    data1[NEXT] = (char)(newpage.GetPageNum());
+    PageNum nextpn;
+    newpage.GetPageNum(nextpn);
+    data1[NEXT] = (char)nextpn;
     memcpy(data1 + DATA_HEADER_LENGTH, data + DATA_HEADER_LENGTH, (size_t)(len/2 * (length + 8)));
     memcpy(data2 + DATA_HEADER_LENGTH, data + DATA_HEADER_LENGTH + len/2 * (length + 8), (size_t)((len+1-len/2) * (length + 8)));
     setsize(data1,len/2);
@@ -518,30 +548,31 @@ void IX_IndexHandle::split_add_root_rid(PageNum cur, void *pData, const RID &rid
     newrootdata[IS_BOTTOM] = '0';
     newrootdata[NEXT] = (char)255;
     setsize(newrootdata,2);
+    PageNum pn,npn,nrpn,fpn;
+    page.GetPageNum(pn);
+    newpage.GetPageNum(npn);
     memcpy(newrootdata+DATA_HEADER_LENGTH,data1+DATA_HEADER_LENGTH,(size_t)length);
-    memcpy(newrootdata+DATA_HEADER_LENGTH+length,(void*)(&(page.GetPageNum())),sizeof(PageNum));
+    memcpy(newrootdata+DATA_HEADER_LENGTH+length,(void*)(&(pn)),sizeof(PageNum));
     memcpy(newrootdata+DATA_HEADER_LENGTH+length+4,data2+DATA_HEADER_LENGTH,(size_t)length);
-    memcpy(newrootdata+DATA_HEADER_LENGTH+length+4+length,(void*)(&(newpage.GetPageNum())),sizeof(PageNum));
+    memcpy(newrootdata+DATA_HEADER_LENGTH+length+4+length,(void*)(&(npn)),sizeof(PageNum));
 
     PF_PageHandle firstpage;
     file.GetFirstPage(firstpage);
     char *sysdata;
     firstpage.GetData(sysdata);
-    sysdata[ROOT_POS] = (char) newrootpage.GetPageNum();
+    sysdata[ROOT_POS] = (char) npn;
 
-    file.MarkDirty(page.GetPageNum());
-    file.MarkDirty(newpage.GetPageNum());
-    file.MarkDirty(newrootpage.GetPageNum());
-    file.MarkDirty(firstpage.GetPageNum());
-    file.UnpinPage(page.GetPageNum());
-    file.UnpinPage(newpage.GetPageNum());
-    file.UnpinPage(newrootpage.GetPageNum());
-    file.UnpinPage(firstpage.GetPageNum());
+    
+    newrootpage.GetPageNum(nrpn);
+    firstpage.GetPageNum(fpn);
 
-
-    file.MarkDirty(page.GetPageNum());
-    file.MarkDirty(newpage.GetPageNum());
-    file.UnpinPage(page.GetPageNum());
-    file.UnpinPage(newpage.GetPageNum());
+    file.MarkDirty(pn);
+    file.MarkDirty(npn);
+    file.MarkDirty(nrpn);
+    file.MarkDirty(fpn);
+    file.UnpinPage(pn);
+    file.UnpinPage(npn);
+    file.UnpinPage(nrpn);
+    file.UnpinPage(fpn);
 
 }
