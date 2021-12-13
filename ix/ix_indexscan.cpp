@@ -122,9 +122,9 @@ bool IX_IndexScan::notacc(const PageNum &pagenum,const SlotNum &slotnum){
     file.GetThisPage(pagenum,page);
     char *data;
     page.GetData(data);
-    void *qData;
+    char *qData;
     int pos = slotnum * (length + 4);
-    qData = (void*)data + pos;
+    qData = data + pos;
     switch (type)
     {
         case INT:

@@ -8,9 +8,9 @@ int findpage(char *data, void *pData, AttrType type, int length){
     int l = 0, r = getsize(data);
     while(l < r - 1){
         int mid = l + r >> 1;
-        void *qData;
+        char *qData;
         int pos = mid * (length + 4);
-        qData = (void*)data + pos;
+        qData = data + pos;
         switch (type)
         {
             case INT:
@@ -50,9 +50,9 @@ RID findrid(char *data, void *pData, AttrType type, int length){
     int l = 0, r = getsize(data);
     while(l < r - 1){
         int mid = l + r >> 1;
-        void *qData;
+        char *qData;
         int pos = mid * (length + 8);
-        qData = (void*)data + pos;
+        qData = (char*)data + pos;
         switch (type)
         {
             case INT:
@@ -95,9 +95,9 @@ int lower_bound_pos(char *data, void *pData, AttrType type, int length){
     int l = -1, r = getsize(data);
     while(l < r - 1){
         int mid = l + r >> 1;
-        void *qData;
+        char *qData;
         int pos = mid * (length + datalen);
-        qData = (void*)data + pos;
+        qData = (char*)data + pos;
         switch (type)
         {
             case INT:
@@ -138,9 +138,9 @@ int upper_bound_pos(char *data, void *pData, AttrType type, int length){
     int l = 1, r = getsize(data);
     while(l < r - 1){
         int mid = l + r >> 1;
-        void *qData;
+        char *qData;
         int pos = mid * (length + datalen);
-        qData = (void*)data + pos;
+        qData = (char*)data + pos;
         switch (type)
         {
             case INT:
