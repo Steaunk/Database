@@ -13,9 +13,16 @@ set(SOURCE
         ${CMAKE_CURRENT_SOURCE_DIR}/pf_manager.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/pf_pagehandle.cpp)
 add_library(pf ${HEADER} ${SOURCE})
-#add_executable(pf_test test1.cpp ${HEADER} ${SOURCE})
-#add_executable(pf_TEST_2 test2.cpp ${HEADER} ${SOURCE})
-#add_executable(pf_TEST_3 test3.cpp ${HEADER} ${SOURCE})
+
+add_executable(pf_test_1 pf_test1.cpp ${HEADER} ${SOURCE})
+add_executable(pf_test_2 pf_test2.cpp ${HEADER} ${SOURCE})
+add_executable(pf_test_3 pf_test3.cpp ${HEADER} ${SOURCE})
+
+enable_testing()
+
+add_test(NAME pf_test_1 COMMAND pf_test_1)
+add_test(NAME pf_test_2 COMMAND pf_test_2)
+add_test(NAME pf_test_3 COMMAND pf_test_3)
 #target_link_libraries(pf_TEST_1 SP)
 #target_link_libraries(pf_TEST_2 SP)
 #target_link_libraries(pf_TEST_3 SP)

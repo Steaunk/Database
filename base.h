@@ -31,11 +31,6 @@ typedef int RC;
 #define START_PF_ERR  (-1)
 #define END_PF_ERR    (-100)
 #define START_RM_ERR  (-101)
-#define RM_RECORD_SIZE_TOO_LARGE (-102)
-#define RM_RECORD_DELETED (-103)
-#define RM_NO_FREE_SLOT (-104)
-#define RM_INVALID_RID (-105)
-#define RM_EOF (-106)
 #define END_RM_ERR    (-200)
 #define START_IX_ERR  (-201)
 #define END_IX_ERR    (-300)
@@ -105,6 +100,14 @@ typedef char Boolean;
 
 #ifndef NULL
 #define NULL 0
+#endif
+
+#ifdef DEBUG
+#define debug(str...) printf(str)
+#define IS_DEBUG true
+#else 
+#define debug(str...) (0)
+#define IS_DBBUG false
 #endif
 
 #endif

@@ -1,6 +1,7 @@
 #include "rm.h"
 #include "rm_internal.h"
 #include <cstring>
+#include <cstdio>
 
 RM_FileHandle::RM_FileHandle(){
 
@@ -13,6 +14,10 @@ RM_FileHandle::~RM_FileHandle(){
 /*RM_FileHeader* RM_FileHandle::GetFileHeaderPointer(){
     return &rmFileHeader;
 }*/
+
+RM_FileHeader RM_FileHandle::GetFileHeader() const{
+    return rmFileHeader;
+}
 
 RC RM_FileHandle::AllocatePage(PF_PageHandle &pageHandle, PageNum &pageNum){
     TRY(pfFileHandle.AllocatePage(pageHandle));
@@ -74,7 +79,7 @@ RC RM_FileHandle::GetDataBySlotNum(const PF_PageHandle &pageHandle, const SlotNu
 }
 
 RC RM_FileHandle::GetSlot(const PF_PageHandle &pageHandle, const SlotNum &slotNum, RM_Slot &slot) const {
-    if(slotNum >= rmFileHeader.recordSize) return RM_INVALID_RID;
+    if(slotNum >= rmFileHeader.recordNumPerPage) return RM_INVALID_RID;
     char *data;
     TRY(pageHandle.GetData(data));
     data += rmFileHeader.bitmapOffset + slotNum / 8;
@@ -84,7 +89,7 @@ RC RM_FileHandle::GetSlot(const PF_PageHandle &pageHandle, const SlotNum &slotNu
 }
 
 RC RM_FileHandle::SetSlot(const PF_PageHandle &pageHandle, const SlotNum &slotNum, const RM_Slot &slot) {
-    if(slotNum >= rmFileHeader.recordSize) return RM_INVALID_RID;
+    if(slotNum >= rmFileHeader.recordNumPerPage) return RM_INVALID_RID;
     char *data;
     TRY(pageHandle.GetData(data));
     data += rmFileHeader.bitmapOffset + slotNum / 8;
@@ -165,11 +170,11 @@ RC RM_FileHandle::InsertRec(const char *pData, RID &rid){
         pageNum = rmFileHeader.nextFreePage;
         TRY(pfFileHandle.GetThisPage(pageNum, pageHandle));
     }
-
     SAFE_TRY(GetPageHeader(pageHandle, pageHeader));
     char *data;
     SAFE_TRY(GetFreeSlot(pageHandle, slotNum, data));
     memcpy(data, pData, rmFileHeader.recordSize);
+    SAFE_TRY(SetSlot(pageHandle, slotNum, true));
 
     pageHeader->recordNum += 1;
     if(pageHeader->recordNum == rmFileHeader.recordNumPerPage){

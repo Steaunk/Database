@@ -12,7 +12,7 @@ RM_Record::~RM_Record(){
 }
 
 RC RM_Record::GetData(char *&pData) const {
-    ASSERT(this->pData == nullptr);
+    ASSERT(this->pData != nullptr);
     pData = this->pData;
     return OK_RC;
 }

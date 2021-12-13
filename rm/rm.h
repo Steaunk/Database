@@ -50,6 +50,9 @@ public:
 // RM_FileHandle: RM File interface
 //
 class RM_FileHandle {
+
+    friend class RM_Manager;
+
     RM_FileHeader rmFileHeader;
     PF_FileHandle pfFileHandle;
     bool isHeaderModified;
@@ -69,17 +72,10 @@ class RM_FileHandle {
     RC GetSlot(const PF_PageHandle &, const SlotNum &, RM_Slot &) const;
 
     RC SetSlot(const PF_PageHandle &, const SlotNum &, const RM_Slot &);
-public:
-    RM_FileHandle ();
-    ~RM_FileHandle();
-
-    //RM_FileHeader* GetFileHeaderPointer();
 
     void CopyToFileHeader(const RM_FileHeader *fileHeader);
     
     void CopyFromFileHeader(RM_FileHeader *fileHeader);
-
-    PF_FileHandle GetFileHandle() const;
 
     bool IsHeaderModified() const;
 
@@ -89,7 +85,18 @@ public:
 
     static RC GetRecordNumPerPage(int &recordNumPerPage, int recordSize);
 
-    // Given a RID, return the record
+public:
+    RM_FileHandle ();
+    ~RM_FileHandle();
+
+    PF_FileHandle GetFileHandle() const;
+
+    RM_FileHeader GetFileHeader() const;
+
+    //RM_FileHeader* GetFileHeaderPointer();
+    RC GetNextRec(const RID &, RM_Record &) const;
+
+       // Given a RID, return the record
     RC GetRec     (const RID &rid, RM_Record &rec) const;
 
     RC InsertRec  (const char *pData, RID &rid);       // Insert a new record
@@ -106,6 +113,15 @@ public:
 // RM_FileScan: condition-based scan of records in the file
 //
 class RM_FileScan {
+    bool isOpen;
+    RM_FileHandle rmFileHandle;
+    CompOp compOp;
+    AttrType attrType;
+    int attrLength;
+    int attrOffset;
+    void *value;
+    PageNum curPageNum;
+    SlotNum curSlotNum;
 public:
     RM_FileScan  ();
     ~RM_FileScan ();
@@ -141,5 +157,15 @@ public:
 // Print-error function
 //
 void RM_PrintError(RC rc);
+
+// RM WARN
+#define RM_RECORD_DELETED (START_RM_WARN + 0) //record has already deleted
+#define RM_NO_FREE_SLOT (START_RM_WARN + 1) //record has already deleted
+#define RM_EOF (START_RM_WARN + 2)
+
+// RM ERR
+#define RM_RECORD_SIZE_TOO_LARGE (START_RM_ERR - 0) //record size is too large
+#define RM_INVALID_RID (START_RM_ERR - 1)
+#define RM_INVALID_SCAN (START_RM_ERR - 2)
 
 #endif

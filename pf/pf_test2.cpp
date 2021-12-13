@@ -39,6 +39,7 @@ extern void PF_Statistics();
 //
 #define FILE1	"file1"
 
+static
 RC TestPF()
 {
    PF_Manager pfm;

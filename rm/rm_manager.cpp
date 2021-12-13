@@ -1,6 +1,8 @@
 #include "rm.h"
 #include "rm_internal.h"
 #include <cstring>
+#include <iostream>
+using namespace std;
 
 RM_Manager::RM_Manager(PF_Manager &pfm){
     pfManager = &pfm;
