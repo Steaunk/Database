@@ -1,5 +1,7 @@
 #include "rm.h"
 #include <cstring>
+#include <cstdlib>
+#include <cstdio>
 
 RM_FileScan::RM_FileScan(){}
 RM_FileScan::~RM_FileScan (){}
@@ -32,11 +34,11 @@ RC RM_FileScan::OpenScan(const RM_FileHandle &fileHandle,
 RC RM_FileScan::GetNextRec(RM_Record &rec){
     if(!isOpen) return RM_INVALID_SCAN;
 
-    bool notFound = true;
+    /*bool notFound = true;
 
-    RC rc;
+    RC rc;*/
 
-    do{
+    /*do{
         curSlotNum += 1;
         if(curSlotNum == rmFileHandle.GetFileHeader().recordSize){
             curSlotNum = 0;
@@ -48,6 +50,7 @@ RC RM_FileScan::GetNextRec(RM_Record &rec){
 
     }
     while(notFound);
+    */
 
 	return OK_RC;
 }
