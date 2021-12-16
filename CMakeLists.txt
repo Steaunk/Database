@@ -1,10 +1,15 @@
 cmake_minimum_required(VERSION 3.21)
 project(Database)
 
-#set(CMAKE_CXX_FLAGS_DEBUG_INIT "-DDEBUG")
+if(" ${CMAKE_SOURCE_DIR}" STREQUAL " ${CMAKE_BINARY_DIR}")
+	message(FATAL_ERROR "
+FATAL: In-source builds are not allowed.
+	You should create a separete directory for build files.
+")
+endif()
 
 #ADD_DEFINITIONS("-pedantic -Wno-unused -Wall -Wextra -Werror -Wstrict-prototypes -Wmissing-prototypes -O2")
-ADD_DEFINITIONS("-Wall -Werror -Wstrict-prototypes -Wmissing-prototypes -O2 -DDEBUG")
+ADD_DEFINITIONS("-Wall -Werror -O2 -DDEBUG")
 #ADD_COMPILE_DEFINITIONS(
 #  $<$<CONFIG:DEBUG>:DEBUG>
 #)
