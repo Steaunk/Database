@@ -2,10 +2,12 @@
 #include <string>
 #include <cstring>
 #include <vector>
+#include <iostream>
+using namespace std;
 
 int findpage(char *data, void *pData, AttrType type, int length){
-    data += DATA_HEADER_LENGTH;
     int l = 0, r = getsize(data);
+    data += DATA_HEADER_LENGTH;
     while(l < r - 1){
         int mid = l + r >> 1;
         char *qData;
@@ -46,8 +48,8 @@ int findpage(char *data, void *pData, AttrType type, int length){
 }
 
 RID findrid(char *data, void *pData, AttrType type, int length){
-    data += DATA_HEADER_LENGTH;
     int l = 0, r = getsize(data);
+    data += DATA_HEADER_LENGTH;
     while(l < r - 1){
         int mid = l + r >> 1;
         char *qData;
@@ -90,9 +92,9 @@ RID findrid(char *data, void *pData, AttrType type, int length){
 }
 
 int lower_bound_pos(char *data, void *pData, AttrType type, int length){
+    int l = -1, r = getsize(data);
     int datalen = 4 + 4*(data[IS_BOTTOM] - '0');
     data += DATA_HEADER_LENGTH;
-    int l = -1, r = getsize(data);
     while(l < r - 1){
         int mid = l + r >> 1;
         char *qData;
@@ -133,9 +135,10 @@ int lower_bound_pos(char *data, void *pData, AttrType type, int length){
 }
 
 int upper_bound_pos(char *data, void *pData, AttrType type, int length){
+    int l = -1, r = getsize(data);
     int datalen = 4 + 4*(data[IS_BOTTOM] - '0');
     data += DATA_HEADER_LENGTH;
-    int l = 1, r = getsize(data);
+    cout << "l=" << l << ",r=" << r << endl;
     while(l < r - 1){
         int mid = l + r >> 1;
         char *qData;
@@ -145,6 +148,7 @@ int upper_bound_pos(char *data, void *pData, AttrType type, int length){
         {
             case INT:
                 /* code */
+                cout << *(int*) qData << " " << *(int*)pData << endl;
                 if(*((int*)qData) <= *((int*)pData)){
                     l = mid;
                 }else{
@@ -172,12 +176,50 @@ int upper_bound_pos(char *data, void *pData, AttrType type, int length){
                 break;
         }
     }
+    cout << l << endl;
     return l+1;
 }
 
 void setsize(char *data, int size){
-    data[2] = size/1000 + '0', data[3] = size/100 % 10 + '0', data[4] = size/10 %10 + '0', data[5] = size%10 + '0';
+    for(int i = HEADER_LENGTH - 1; i >= SIZE_START; --i){
+        data[i] = size % 10 + '0';
+        size /= 10;
+    }
 }
 int getsize(char *data){
-    return (data[2]-'0')*1000+(data[3]-'0')*100+(data[4]-'0')*10+data[5]-'0';
+    int ans = 0;
+    for(int i = SIZE_START; i < HEADER_LENGTH; ++i){
+        ans = ans * 10 + data[i] - '0';
+    }
+    return ans;
 }
+
+void setnext(char *data, int pagenum){
+    for(int i = SIZE_START - 1; i >= NEXT_START; --i){
+        data[i] = pagenum % 10 + '0';
+        pagenum /= 10;
+    }
+}
+int getnext(char *data){
+    int ans = 0;
+    for(int i = NEXT_START; i < SIZE_START; ++i){
+        ans = ans * 10 + data[i] - '0';
+    }
+    return ans;
+}
+
+
+void setroot(char *data, int root){
+    for(int i = HEADER_LENGTH - 1; i >= ROOT_POS_START; --i){
+        data[i] = root % 10 + '0';
+        root /= 10;
+    }
+}
+int getroot(char *data){
+    int ans = 0;
+    for(int i = ROOT_POS_START; i < HEADER_LENGTH; ++i){
+        ans = ans * 10 + data[i] - '0';
+    }
+    return ans;
+}
+

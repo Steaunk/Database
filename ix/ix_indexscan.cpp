@@ -2,6 +2,8 @@
 #include <string>
 #include <cstring>
 #include <vector>
+#include <iostream>
+using namespace std;
 
 // class IX_IndexScan {
 //   public:
@@ -22,16 +24,21 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &indexHandle, // Initialize index
                       CompOp      compOp,
                       void        *value,
                       ClientHint  pinHint){
+    
     op = compOp;
+    cout << "op=" << op << endl;
     value = value;
     type = indexHandle.type;
     length = indexHandle.length;
+    file = indexHandle.file;
+    PF_PageHandle pg;
+    PF_PrintError(file.GetFirstPage(pg));
     if(compOp == EQ_OP || compOp == GE_OP){
         PF_PageHandle page;
         TRY(file.GetFirstPage(page));
         char *data;
         TRY(page.GetData(data));
-        int root = data[ROOT_POS];
+        int root = getroot(data);
         std::vector<int> nodes;
         int cur = root;
         while(true){
@@ -50,16 +57,22 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &indexHandle, // Initialize index
         }
         page.GetPageNum(curpage);
         curslot = lower_bound_pos(data,value,type,length);
+        file.UnpinPage(curpage);
     }
     if(compOp == GT_OP){
         PF_PageHandle page;
+        cout << "here1" << endl;
         TRY(file.GetFirstPage(page));
+        cout << "here2" << endl;
         char *data;
         TRY(page.GetData(data));
-        int root = data[ROOT_POS];
+        cout << "here3" << endl;
+        int root = getroot(data);
         std::vector<int> nodes;
         int cur = root;
+        cout << "here4" << endl;
         while(true){
+            cout << "cur=" << cur << endl;
             nodes.push_back(cur);
             TRY(file.GetThisPage(cur,page));
             TRY(page.GetData(data));
@@ -74,13 +87,18 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &indexHandle, // Initialize index
             file.UnpinPage(pn);
         }
         page.GetPageNum(curpage);
+        cout << "size=" << getsize(data) << endl;
         curslot = upper_bound_pos(data,value,type,length) - 1;
+        next(curpage,curslot);
+        cout << "curslot=" << curslot << endl;
+        file.UnpinPage(curpage);
     }
     return OK_RC;                      
 }
 
 RC IX_IndexScan::GetNextEntry (RID &rid){
-    if(curpage == 255){
+    cout << "getting next entry" << endl;
+    if(curpage == CHAIN_EOF){
         return IX_EOF;
     }
     if((op == LE_OP || op == LT_OP || op == EQ_OP) && notacc(curpage,curslot)){
@@ -90,8 +108,9 @@ RC IX_IndexScan::GetNextEntry (RID &rid){
     next(curpage,curslot);
     while(op == NE_OP && notacc(curpage,curslot)){
         next(curpage,curslot);
-        if(curpage == 255)break;
+        if(curpage == CHAIN_EOF)break;
     }
+    cout << "end getting next entry" << endl;
     return OK_RC;
 }
 
@@ -103,16 +122,17 @@ RC IX_IndexScan::getrid(const PageNum &PageNum, const SlotNum &slotnum, RID &rid
     int a = *((int*)(data + slotnum * (length + 8) + length)),
     b = *((int*)(data + slotnum * (length + 8) + length + 4));
     rid = RID(a,b);
+    cout << a << " " << b << endl;
 }
 
 void IX_IndexScan::next(PageNum &pagenum, SlotNum &slotnum){
-    curslot += 1;
+    slotnum += 1;
     PF_PageHandle page;
     file.GetThisPage(pagenum,page);
     char *data;
     page.GetData(data);
     if(getsize(data) == slotnum){
-        pagenum = data[NEXT];
+        pagenum = getnext(data);
         slotnum = 0;
     }
 }

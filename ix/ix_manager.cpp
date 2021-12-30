@@ -1,6 +1,8 @@
 #include "ix.h"
 #include <string>
 #include <cstring>
+#include<iostream>
+using namespace std;
 
 // class IX_Manager {
 //   public:
@@ -30,7 +32,8 @@ RC IX_Manager::CreateIndex  (const char *fileName,          // Create new index
                              int        attrLength){
   std::string indexFileName = fileName;
   indexFileName += ".";
-  indexFileName += indexNo;
+  indexFileName += indexNo+"0";
+  cout << indexFileName << endl;
   TRY(pfmp->CreateFile(indexFileName.c_str()));
   PF_FileHandle file;
   TRY(pfmp->OpenFile(indexFileName.c_str(),file));
@@ -42,8 +45,8 @@ RC IX_Manager::CreateIndex  (const char *fileName,          // Create new index
   std::string data_s = "";
   data_s += (char)attrType;
   data_s += (char)attrLength;
-  data_s += (char)1;
-  strcpy(data,data_s.c_str());
+  data_s += "000000001";
+  memcpy(data,data_s.c_str(),sizeof(char) * PF_PAGE_SIZE);
   PageNum pn;
   TRY(page.GetPageNum(pn))
   TRY(file.MarkDirty(pn));
@@ -52,9 +55,9 @@ RC IX_Manager::CreateIndex  (const char *fileName,          // Create new index
   TRY(file.AllocatePage(page))
   TRY(page.GetData(data))
   data_s = "1";
-  data_s += (char)(255);
-  data_s += "0000";
-  strcpy(data,data_s.c_str());
+  data_s += "000000000";
+  data_s += "000";
+  memcpy(data,data_s.c_str(),sizeof(char) * PF_PAGE_SIZE);
   TRY(page.GetPageNum(pn))
   TRY(file.MarkDirty(pn));
   TRY(file.UnpinPage(pn));
@@ -67,7 +70,7 @@ RC IX_Manager::DestroyIndex  (const char *fileName,          // Destroy index
                              int        indexNo){
   std::string indexFileName = fileName;
   indexFileName += ".";
-  indexFileName += indexNo;
+  indexFileName += indexNo+"0";
   TRY(pfmp->DestroyFile(indexFileName.c_str()));
   return OK_RC;
 
@@ -78,7 +81,7 @@ RC IX_Manager::OpenIndex(const char *fileName,          // Open index
                           IX_IndexHandle &indexHandle){
   std::string indexFileName = fileName;
   indexFileName += ".";
-  indexFileName += indexNo;
+  indexFileName += indexNo+"0";
   PF_FileHandle file;
   TRY(pfmp->OpenFile(indexFileName.c_str(),file));
   indexHandle.file = file;
