@@ -5,12 +5,15 @@
 #include <utility>
 #define TYPE_POS 0
 #define LEN_POS 1
-#define ROOT_POS 2
-#define HEADER_LENGTH 3
+#define ROOT_POS_START 2
+#define HEADER_LENGTH 11
 #define IS_BOTTOM 0
-#define NEXT 1
-#define DATA_HEADER_LENGTH 6
+#define NEXT_START 1
+#define SIZE_START 10
+#define DATA_HEADER_LENGTH 13
 #define IX_EOF -1
+#define MAX_INDEX_SIZE 200
+#define CHAIN_EOF 0
 
 class IX_Manager;
 class IX_IndexHandle;
@@ -99,3 +102,7 @@ int lower_bound_pos(char *data, void *pData, AttrType type, int length);
 int upper_bound_pos(char *data, void *pData, AttrType type, int length);
 void setsize(char *data, int size);
 int getsize(char *data);
+void setnext(char *data, int pagenum);
+int getnext(char *data);
+void setroot(char *data, int root);
+int getroot(char *data);
