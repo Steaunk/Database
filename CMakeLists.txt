@@ -13,7 +13,7 @@ ADD_DEFINITIONS("-Wall -Werror -O2 -DDEBUG")
 #ADD_COMPILE_DEFINITIONS(
 #  $<$<CONFIG:DEBUG>:DEBUG>
 #)
-set(CTEST_TEST_TIMEOUT 1)
+# set(CTEST_TEST_TIMEOUT 1)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 list(APPEND CMAKE_CTEST_ARGUMENTS "--output-on-failure")
@@ -26,10 +26,12 @@ set(HEADER
 add_subdirectory(pf)
 add_subdirectory(rm)
 add_subdirectory(ix)
+add_subdirectory(sm)
 
 add_executable(database main.cpp)
 
-target_link_libraries(database pf rm ix)
+#target_link_libraries(database pf rm ix)
+target_link_libraries(database pf rm sm ix)
 
 enable_testing()
 

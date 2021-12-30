@@ -2,10 +2,10 @@ set(HEADER
         ${HEADER}
         ${CMAKE_CURRENT_SOURCE_DIR}/sm.h
 )
-#set(SOURCE
-#        ${SOURCE}
-#        ${CMAKE_CURRENT_SOURCE_DIR}/ix_manager.cpp
-#)
+set(SOURCE
+        ${SOURCE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/sm_manager.cpp
+)
 
 add_library(sm ${HEADER} ${SOURCE})
 #add_executable(pf_test test1.cpp ${HEADER} ${SOURCE})
