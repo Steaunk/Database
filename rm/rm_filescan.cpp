@@ -1,5 +1,7 @@
 #include "rm.h"
 #include <cstring>
+#include <cstdlib>
+#include <cstdio>
 
 RM_FileScan::RM_FileScan(){}
 RM_FileScan::~RM_FileScan (){}

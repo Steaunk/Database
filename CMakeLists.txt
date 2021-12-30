@@ -10,9 +10,6 @@ endif()
 
 #ADD_DEFINITIONS("-pedantic -Wno-unused -Wall -Wextra -Werror -Wstrict-prototypes -Wmissing-prototypes -O2")
 ADD_DEFINITIONS("-Wall -Werror -O2 -DDEBUG")
-#ADD_COMPILE_DEFINITIONS(
-#  $<$<CONFIG:DEBUG>:DEBUG>
-#)
 # set(CTEST_TEST_TIMEOUT 1)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)

@@ -8,9 +8,9 @@ int findpage(char *data, void *pData, AttrType type, int length){
     int l = 0, r = getsize(data);
     while(l < r - 1){
         int mid = l + r >> 1;
-        void *qData;
+        char *qData;
         int pos = mid * (length + 4);
-        qData = (void*)data + pos;
+        qData = data + pos;
         switch (type)
         {
             case INT:
@@ -31,7 +31,7 @@ int findpage(char *data, void *pData, AttrType type, int length){
                 break;
             case STRING:
                 /* code */
-                if(strcmp(qData,pData) <= 0){
+                if(strcmp((char*)qData,(char*)pData) <= 0){
                     l = mid;
                 }else{
                     r = mid;
@@ -50,9 +50,9 @@ RID findrid(char *data, void *pData, AttrType type, int length){
     int l = 0, r = getsize(data);
     while(l < r - 1){
         int mid = l + r >> 1;
-        void *qData;
+        char *qData;
         int pos = mid * (length + 8);
-        qData = (void*)data + pos;
+        qData = (char*)data + pos;
         switch (type)
         {
             case INT:
@@ -73,7 +73,7 @@ RID findrid(char *data, void *pData, AttrType type, int length){
                 break;
             case STRING:
                 /* code */
-                if(strcmp(qData,pData) <= 0){
+                if(strcmp((char*)qData,(char*)pData) <= 0){
                     l = mid;
                 }else{
                     r = mid;
@@ -95,9 +95,9 @@ int lower_bound_pos(char *data, void *pData, AttrType type, int length){
     int l = -1, r = getsize(data);
     while(l < r - 1){
         int mid = l + r >> 1;
-        void *qData;
+        char *qData;
         int pos = mid * (length + datalen);
-        qData = (void*)data + pos;
+        qData = (char*)data + pos;
         switch (type)
         {
             case INT:
@@ -118,7 +118,7 @@ int lower_bound_pos(char *data, void *pData, AttrType type, int length){
                 break;
             case STRING:
                 /* code */
-                if(strcmp(qData,pData) < 0){
+                if(strcmp((char*)qData,(char*)pData) < 0){
                     l = mid;
                 }else{
                     r = mid;
@@ -138,9 +138,9 @@ int upper_bound_pos(char *data, void *pData, AttrType type, int length){
     int l = 1, r = getsize(data);
     while(l < r - 1){
         int mid = l + r >> 1;
-        void *qData;
+        char *qData;
         int pos = mid * (length + datalen);
-        qData = (void*)data + pos;
+        qData = (char*)data + pos;
         switch (type)
         {
             case INT:
@@ -161,7 +161,7 @@ int upper_bound_pos(char *data, void *pData, AttrType type, int length){
                 break;
             case STRING:
                 /* code */
-                if(strcmp(qData,pData) <= 0){
+                if(strcmp((char*)qData,(char*)pData) <= 0){
                     l = mid;
                 }else{
                     r = mid;
@@ -175,9 +175,9 @@ int upper_bound_pos(char *data, void *pData, AttrType type, int length){
     return l+1;
 }
 
-inline void setsize(char *data, int size){
+void setsize(char *data, int size){
     data[2] = size/1000 + '0', data[3] = size/100 % 10 + '0', data[4] = size/10 %10 + '0', data[5] = size%10 + '0';
 }
-inline void getsize(char *data){
+int getsize(char *data){
     return (data[2]-'0')*1000+(data[3]-'0')*100+(data[4]-'0')*10+data[5]-'0';
 }
