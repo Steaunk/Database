@@ -42,7 +42,7 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID &rid){
             cur = findpage(data,pData,type,length);
         }
     }
-    for(int i = 0; i < nodes.size(); ++i){
+    for(size_t i = 0; i < nodes.size(); ++i){
         file.UnpinPage(nodes[i]);
     }
     cout << "is_full=" << is_full(cur) << endl;
@@ -54,7 +54,7 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID &rid){
         else{
             std::pair<void*, PageNum>son;
             son = split_add_rid(cur,pData,rid);
-            for (int i = nodes.size()-2; i; --i){
+            for (int i = (int)nodes.size()-2; i >= 0; --i){
                 cur = nodes[i];
                 if(!is_full(cur)){
                     add_page(cur,son.first,son.second);
