@@ -27,7 +27,7 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &indexHandle, // Initialize index
     
     op = compOp;
     cout << "op=" << op << endl;
-    value = value;
+    this->value = value;
     type = indexHandle.type;
     length = indexHandle.length;
     file = indexHandle.file;
@@ -123,6 +123,7 @@ RC IX_IndexScan::getrid(const PageNum &PageNum, const SlotNum &slotnum, RID &rid
     b = *((int*)(data + slotnum * (length + 8) + length + 4));
     rid = RID(a,b);
     cout << a << " " << b << endl;
+    return OK_RC;
 }
 
 void IX_IndexScan::next(PageNum &pagenum, SlotNum &slotnum){
@@ -232,4 +233,5 @@ bool IX_IndexScan::notacc(const PageNum &pagenum,const SlotNum &slotnum){
         default:
             break;
     }
+    return OK_RC;
 }
