@@ -31,8 +31,8 @@ RC IX_Manager::CreateIndex  (const char *fileName,          // Create new index
                              AttrType   attrType,
                              int        attrLength){
   std::string indexFileName = fileName;
-  indexFileName += ".";
-  indexFileName += indexNo+"0";
+  indexFileName += '.';
+  indexFileName += indexNo+'0';
   TRY(pfmp->CreateFile(indexFileName.c_str()));
   PF_FileHandle file;
   TRY(pfmp->OpenFile(indexFileName.c_str(),file));
