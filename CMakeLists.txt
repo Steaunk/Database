@@ -3,8 +3,8 @@ project(Database)
 
 #set(CMAKE_CXX_FLAGS_DEBUG_INIT "-DDEBUG")
 
-#ADD_DEFINITIONS("-pedantic -Wno-unused -Wall -Wextra -Werror -Wstrict-prototypes -Wmissing-prototypes -O2")
-ADD_DEFINITIONS("-Wall -Wstrict-prototypes -Wmissing-prototypes -O2")
+ADD_DEFINITIONS("-Wno-unused -Wall -DDEBUG -O2")
+#ADD_DEFINITIONS("-Wall -Wstrict-prototypes -Wmissing-prototypes -O2")
 set(CTEST_TEST_TIMEOUT 1)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
