@@ -9,7 +9,7 @@ FATAL: In-source builds are not allowed.
 endif()
 
 #ADD_DEFINITIONS("-pedantic -Wno-unused -Wall -Wextra -Werror -Wstrict-prototypes -Wmissing-prototypes -O2")
-ADD_DEFINITIONS("-Wall -Werror -O2 -DDEBUG")
+ADD_DEFINITIONS("-Wall -O2 -DDEBUG")
 # set(CTEST_TEST_TIMEOUT 1)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -25,11 +25,14 @@ add_subdirectory(rm)
 add_subdirectory(ix)
 add_subdirectory(sm)
 add_subdirectory(ql)
+add_subdirectory(ps)
+include_directories(
+        ${PROJECT_SOURCE_DIR}/antlr4-cpp-runtime-4.9.3-source/runtime/src
+)
 
 add_executable(database main.cpp)
 
-#target_link_libraries(database pf rm ix)
-target_link_libraries(database pf rm sm ix ql)
+target_link_libraries(database pf rm sm ix ql ps antlr4-cpp-runtime)
 
 enable_testing()
 
