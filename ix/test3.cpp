@@ -28,7 +28,7 @@ int main(){
 	}
 	cout << "open success" << endl;
 	data_ t1;
-	for(int i = 0; i <= 15; ++i){
+	for(int i = 0; i <= 10; ++i){
 		t1.a = i;
 		t1.p = RID(i,i);
 		ixh.InsertEntry(&t1.a,t1.p);

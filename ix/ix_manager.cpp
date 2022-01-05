@@ -33,7 +33,6 @@ RC IX_Manager::CreateIndex  (const char *fileName,          // Create new index
   std::string indexFileName = fileName;
   indexFileName += ".";
   indexFileName += indexNo+"0";
-  cout << indexFileName << endl;
   TRY(pfmp->CreateFile(indexFileName.c_str()));
   PF_FileHandle file;
   TRY(pfmp->OpenFile(indexFileName.c_str(),file));
