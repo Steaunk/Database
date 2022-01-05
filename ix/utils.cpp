@@ -181,14 +181,14 @@ int upper_bound_pos(char *data, void *pData, AttrType type, int length){
 }
 
 void setsize(char *data, int size){
-    for(int i = HEADER_LENGTH - 1; i >= SIZE_START; --i){
+    for(int i = DATA_HEADER_LENGTH - 1; i >= SIZE_START; --i){
         data[i] = size % 10 + '0';
         size /= 10;
     }
 }
 int getsize(char *data){
     int ans = 0;
-    for(int i = SIZE_START; i < HEADER_LENGTH; ++i){
+    for(int i = SIZE_START; i < DATA_HEADER_LENGTH; ++i){
         ans = ans * 10 + data[i] - '0';
     }
     return ans;

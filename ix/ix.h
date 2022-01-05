@@ -12,7 +12,8 @@
 #define SIZE_START 10
 #define DATA_HEADER_LENGTH 13
 #define IX_EOF -1
-#define MAX_INDEX_SIZE 200
+#define IX_LENGTH_NOT -2
+#define MAX_INDEX_SIZE 5
 #define CHAIN_EOF 0
 
 class IX_Manager;

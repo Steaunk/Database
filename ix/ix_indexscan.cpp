@@ -27,7 +27,7 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &indexHandle, // Initialize index
     
     op = compOp;
     cout << "op=" << op << endl;
-    value = value;
+    this->value = value;
     type = indexHandle.type;
     length = indexHandle.length;
     file = indexHandle.file;
@@ -56,7 +56,9 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &indexHandle, // Initialize index
             file.UnpinPage(pn);
         }
         page.GetPageNum(curpage);
+        cout << "size=" << getsize(data) << endl;
         curslot = lower_bound_pos(data,value,type,length);
+        cout << "curslot=" << curslot << endl;
         file.UnpinPage(curpage);
     }
     if(compOp == GT_OP){
@@ -98,6 +100,7 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &indexHandle, // Initialize index
 
 RC IX_IndexScan::GetNextEntry (RID &rid){
     cout << "getting next entry" << endl;
+    cout << notacc(curpage,curslot) << endl;
     if(curpage == CHAIN_EOF){
         return IX_EOF;
     }
@@ -114,15 +117,17 @@ RC IX_IndexScan::GetNextEntry (RID &rid){
     return OK_RC;
 }
 
-RC IX_IndexScan::getrid(const PageNum &PageNum, const SlotNum &slotnum, RID &rid){
+RC IX_IndexScan::getrid(const PageNum &PageNum, const SlotNum &SlotNum, RID &rid){
     PF_PageHandle page;
     TRY(file.GetThisPage(PageNum,page));
     char *data;
     TRY(page.GetData(data));
-    int a = *((int*)(data + slotnum * (length + 8) + length)),
-    b = *((int*)(data + slotnum * (length + 8) + length + 4));
+    int a = *((int*)(data + SlotNum * (length + 8) + length + DATA_HEADER_LENGTH)),
+    b = *((int*)(data + SlotNum * (length + 8) + length + 4 +DATA_HEADER_LENGTH));
+    cout << "SlotNum = " << SlotNum << endl;
     rid = RID(a,b);
     cout << a << " " << b << endl;
+    return OK_RC;
 }
 
 void IX_IndexScan::next(PageNum &pagenum, SlotNum &slotnum){
@@ -143,12 +148,13 @@ bool IX_IndexScan::notacc(const PageNum &pagenum,const SlotNum &slotnum){
     char *data;
     page.GetData(data);
     char *qData;
-    int pos = slotnum * (length + 4);
+    int pos = slotnum * (length + 8) + DATA_HEADER_LENGTH;
     qData = data + pos;
     switch (type)
     {
         case INT:
             /* code */
+            cout << *(int*)qData << " " << *(int*)value << endl;
             switch (op)
             {
                 case EQ_OP:
