@@ -1,11 +1,14 @@
-#include "ps/Myvistor.h"
+#include "ps/MyVisitor.h"
+#include "ps/SQLLexer.h"
 #include <string>
-#include "./antlr4-cpp-runtime-4.9.3-source/runtime/src/antlr4-runtime.h"
+#include "antlr4-runtime.h"
+#include <iostream>
+#include <fstream>
 
 using namespace antlr4;
 
 // 返回类型根据你的visitor决定
-auto parse(std::String sSQL) {
+auto parse(std::string sSQL) {
  // 解析SQL语句sSQL的过程
  // 转化为输入流
  ANTLRInputStream sInputStream(sSQL);
@@ -22,4 +25,13 @@ auto parse(std::String sSQL) {
  // --如果采用编译器方式则需要生成自行设计的物理执行执行计划（相对复杂，易于进行进一步优化，希望有能力的同学自行调研尝试）
  auto iRes = iVisitor.visit(iTree);
  return iRes;
+}
+
+int main(){
+	//std::fstream fin("test.in");
+	std::string s;
+	while(true){
+		getline(std::cin,s);
+		parse(s);
+	}
 }
