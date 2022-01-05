@@ -61,7 +61,7 @@ RC RM_Manager::OpenFile(const char *fileName, RM_FileHandle &rmFileHandle){
 
 RC RM_Manager::CloseFile(RM_FileHandle &fileHandle){
     PF_FileHandle pfFileHandle = fileHandle.GetFileHandle();
-    if(fileHandle.IsHeaderModified()){
+    //if(fileHandle.IsHeaderModified()){
         PF_PageHandle pageHandle;
         TRY(pfFileHandle.GetFirstPage(pageHandle));
         PageNum pageNum;
@@ -73,7 +73,7 @@ RC RM_Manager::CloseFile(RM_FileHandle &fileHandle){
         //memcpy(fileHeader, fileHandle.GetFileHeaderPointer(), RM_FILE_HEADER_SIZE);
         pfFileHandle.MarkDirty(pageNum);
         pfFileHandle.UnpinPage(pageNum);
-    }    
+    //}    
 
     TRY(pfManager->CloseFile(pfFileHandle));
 

@@ -16,12 +16,12 @@ struct data_{
 int main(){
 	puts("NULL");
 	RC code;
-	if(code = ixm.CreateIndex("test_index",0,INT,4)){
+	if((code = ixm.CreateIndex("test_index",0,INT,4))){
 		cout << "Create failed" << endl;
 		PF_PrintError(code);
 		assert(false);
 	}
-	if(code = ixm.OpenIndex("test_index",0,ixh)){
+	if((code = ixm.OpenIndex("test_index",0,ixh))){
 		cout << "Open failed" << endl;
 		PF_PrintError(code);
 		assert(false);

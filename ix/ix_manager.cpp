@@ -68,8 +68,8 @@ RC IX_Manager::CreateIndex  (const char *fileName,          // Create new index
 RC IX_Manager::DestroyIndex  (const char *fileName,          // Destroy index
                              int        indexNo){
   std::string indexFileName = fileName;
-  indexFileName += ".";
-  indexFileName += indexNo+"0";
+  indexFileName += '.';
+  indexFileName += indexNo+'0';
   TRY(pfmp->DestroyFile(indexFileName.c_str()));
   return OK_RC;
 
@@ -79,8 +79,8 @@ RC IX_Manager::OpenIndex(const char *fileName,          // Open index
                           int        indexNo,
                           IX_IndexHandle &indexHandle){
   std::string indexFileName = fileName;
-  indexFileName += ".";
-  indexFileName += indexNo+"0";
+  indexFileName += '.';
+  indexFileName += indexNo+'0';
   PF_FileHandle file;
   TRY(pfmp->OpenFile(indexFileName.c_str(),file));
   indexHandle.file = file;
