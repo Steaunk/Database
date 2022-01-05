@@ -1,11 +1,16 @@
 cmake_minimum_required(VERSION 3.21)
 project(Database)
 
-#set(CMAKE_CXX_FLAGS_DEBUG_INIT "-DDEBUG")
+if(" ${CMAKE_SOURCE_DIR}" STREQUAL " ${CMAKE_BINARY_DIR}")
+	message(FATAL_ERROR "
+FATAL: In-source builds are not allowed.
+	You should create a separete directory for build files.
+")
+endif()
 
-ADD_DEFINITIONS("-Wno-unused -Wall -DDEBUG -O2")
-#ADD_DEFINITIONS("-Wall -Wstrict-prototypes -Wmissing-prototypes -O2")
-set(CTEST_TEST_TIMEOUT 1)
+#ADD_DEFINITIONS("-pedantic -Wno-unused -Wall -Wextra -Werror -Wstrict-prototypes -Wmissing-prototypes -O2")
+ADD_DEFINITIONS("-Wall -Werror -O2 -DDEBUG")
+# set(CTEST_TEST_TIMEOUT 1)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 list(APPEND CMAKE_CTEST_ARGUMENTS "--output-on-failure")
@@ -18,10 +23,13 @@ set(HEADER
 add_subdirectory(pf)
 add_subdirectory(rm)
 add_subdirectory(ix)
+add_subdirectory(sm)
+add_subdirectory(ql)
 
 add_executable(database main.cpp)
 
-target_link_libraries(database pf rm ix)
+#target_link_libraries(database pf rm ix)
+target_link_libraries(database pf rm sm ix ql)
 
 enable_testing()
 

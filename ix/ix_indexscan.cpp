@@ -238,4 +238,5 @@ bool IX_IndexScan::notacc(const PageNum &pagenum,const SlotNum &slotnum){
         default:
             break;
     }
+    return OK_RC;
 }
