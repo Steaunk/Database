@@ -14,7 +14,6 @@ set(SOURCE
 )
 
 set(CTEST_OUTPUT_ON_FAILURE True)
-
 add_library(rm ${HEADER} ${SOURCE})
 add_executable(rm_test_1 rm_test1.cpp ${HEADER} ${SOURCE})
 add_executable(rm_test_2 rm_test2.cpp ${HEADER} ${SOURCE})

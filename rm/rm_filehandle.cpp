@@ -77,11 +77,14 @@ RC RM_FileHandle::GetFreeSlot(const PF_PageHandle &pageHandle, SlotNum &slotNum,
 
 RC RM_FileHandle::FindNextSlot(SlotNum &slotNum, PageNum pageNum, char *&data){
     static PF_PageHandle pageHandle;
+    debug("FindNextSlot : %d %d (%d %d) %d", 
+        slotNum, pageNum, rmFileHeader.recordNumPerPage, 
+        rmFileHeader.recordSize, rmFileHeader.pageNum);
     if(slotNum == 0){
         TRY(pfFileHandle.GetThisPage(pageNum, pageHandle));
     }
     RM_Slot slot;
-    for(int i = slotNum; i <= rmFileHeader.recordNumPerPage; ++i){
+    for(int i = slotNum; i < rmFileHeader.recordNumPerPage; ++i){
         TRY(GetSlot(pageHandle, i, slot));
         if(slot == true){
             slotNum = i;
@@ -177,6 +180,7 @@ safe_exit:
 }
 
 RC RM_FileHandle::InsertRec(const char *pData, RID &rid){
+    debug("InsertRec *((int *)pData) = %d\n", *((int *)pData));
     RC rc = OK_RC;
     PageNum pageNum;
     PF_PageHandle pageHandle;

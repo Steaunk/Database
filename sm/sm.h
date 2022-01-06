@@ -29,14 +29,14 @@ class SM_Manager {
     IX_Manager *ixm;
     RM_Manager *rmm;
     bool isOpenDb;
-    std::string RMName(const char *relName);
-    void WriteData(const char *relName, TableInfo *data);
-    void ReadData(const char *relName, TableInfo *data);
-    RC GetColumnIDByName(const char *relName, TableInfo *tableInfo, int &ID);
+    RC WriteData(const char *relName, TableInfo *data);
   public:
+    std::string RMName(const char *relName);
        SM_Manager  (IX_Manager &ixm, RM_Manager &rmm);  // Constructor
        ~SM_Manager ();                                  // Destructor
        SM_Manager  () = delete;                                  // Constructor for test
+    RC GetColumnIDByName(const char *attrName, TableInfo *tableInfo, int &ID);
+    RC ReadData(const char *relName, TableInfo *data);
     RC OpenDb      (const char *dbName);                // Open database
     RC CloseDb     ();                                  // Close database
     RC CreateDb    (const char *dbName);
@@ -73,7 +73,7 @@ void SM_PrintError(RC rc, std::string msg);
 #define SM_DB_NOT_EXISTS (START_SM_WARN + 2)
 #define SM_TABLE_EXISTS (START_SM_WARN + 3)
 #define SM_TABLE_NOT_EXISTS (START_SM_WARN + 4)
-#define SM_COLUMN_NOT_EXSITS (START_SM_WARN + 5)
+#define SM_UNKNOW_COLUMN (START_QL_WARN + 5)
 //#define RM_EOF (START_RM_WARN + 2)
 
 // SM ERR

@@ -25,9 +25,9 @@ void SM_PrintError(RC rc, std::string msg = "")
   case SM_TABLE_NOT_EXISTS:
     cerr << "Table '" << msg << "' doesn't exist\n";
     break;
-  case SM_COLUMN_NOT_EXSITS:
+  /*case SM_COLUMN_NOT_EXSITS:
     cerr << "Column '" << msg << "' doesn't exist\n";
-    break; 
+    break; */
   case OK_RC: 
     cerr << "SM : I'm healthy!\n";
     break;

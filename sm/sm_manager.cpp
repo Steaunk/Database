@@ -105,7 +105,8 @@ RC SM_Manager::CreateTable(const char *relName,
         tableInfo.columnAttr[i].attrType = attributes[i].attrType;
         strcpy(tableInfo.columnAttr[i].name, attributes[i].attrName);
     }
-    WriteData(relName, &tableInfo);
+    tableInfo.size = recordSize;
+    TRY(WriteData(relName, &tableInfo));
     rmm->CreateFile(RMName(relName).c_str(), recordSize);
     std::cout << "Table '" << relName << "' created\n";
     return OK_RC;
@@ -130,8 +131,6 @@ RC SM_Manager::DescTable(const char *relName){
 
     std::cout << "### 数据表 " << relName << std::endl;
 
-    std::cout << tableInfo.columnNum << std::endl;
-
     for(int i = 0; i < tableInfo.columnNum; ++i){
         std::cout << tableInfo.columnAttr[i].name << " " << tableInfo.columnAttr[i].attrLength << " ";
         switch (tableInfo.columnAttr[i].attrType)
@@ -150,6 +149,7 @@ RC SM_Manager::DescTable(const char *relName){
         }
     }
 
+    std::cout << "总计：" << tableInfo.columnNum << std::endl;
     return OK_RC;
 
 }
@@ -164,6 +164,7 @@ RC SM_Manager::AddColumn   (const char *relName,
     tableInfo.columnAttr[tableInfo.columnNum].attrType = attrInfo->attrType;
     strcpy(tableInfo.columnAttr[tableInfo.columnNum].name, attrInfo->attrName);
     tableInfo.columnNum++;
+    tableInfo.size += attrInfo->attrLength;
     WriteData(relName, &tableInfo);
 
     return OK_RC;
@@ -176,7 +177,7 @@ RC SM_Manager::GetColumnIDByName(const char *attrName, TableInfo *tableInfo, int
             return OK_RC;
         }
     }
-    return SM_COLUMN_NOT_EXSITS;
+    return SM_UNKNOW_COLUMN;
 }
 
 RC SM_Manager::DropColumn   (const char *relName,
@@ -187,7 +188,7 @@ RC SM_Manager::DropColumn   (const char *relName,
     ReadData(relName, &tableInfo);
     int id;
     TRY(GetColumnIDByName(attrName, &tableInfo, id));
-
+    tableInfo.size -= tableInfo.columnAttr[id].attrLength;
     for(int i = id; i < tableInfo.columnNum - 1; ++i){
         tableInfo.columnAttr[i] = tableInfo.columnAttr[i+1];
     }
@@ -226,19 +227,25 @@ RC SM_Manager::Set         (const char *paramName,              // Set system pa
     return OK_RC;
                 }
 
-void SM_Manager::WriteData(const char *relName, TableInfo *data){
+RC SM_Manager::WriteData(const char *relName, TableInfo *data){
+    if(isOpenDb == false) return SM_DB_NOT_OPEN;
     FILE *file = fopen(relName, "w");
     fwrite(data, sizeof(TableInfo), 1, file);
     fclose(file);
+    return OK_RC;
 }
 
-void SM_Manager::ReadData(const char *relName, TableInfo *data){
+RC SM_Manager::ReadData(const char *relName, TableInfo *data){
+    if(isOpenDb == false) return SM_DB_NOT_OPEN;
+    if(!fs::exists(relName)) return SM_TABLE_NOT_EXISTS;
     FILE *file = fopen(relName, "r");
     fread(data, sizeof(TableInfo), 1, file);
     fclose(file);
+    return OK_RC;
 }
 
 RC SM_Manager::GetTableInfo(const char *relName, TableInfo &tableInfo){
+    if(isOpenDb == false) return SM_DB_NOT_OPEN;
     if(!fs::exists(relName)) return SM_TABLE_NOT_EXISTS;
     ReadData(relName, &tableInfo);
     return OK_RC;
@@ -249,3 +256,9 @@ std::string SM_Manager::RMName(const char *relName){
     s += ".rec";
     return s;
 }
+
+/*RC SM_Manager::CheckColumn(cnost char *relName, const char *relName_t, const char *attrName_t){
+
+    return OK_RC;
+}*/
+

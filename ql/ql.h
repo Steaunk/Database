@@ -32,7 +32,7 @@ class QL_Manager {
   SM_Manager *smm;
   IX_Manager *ixm;
   RM_Manager *rmm;
-  RM_FileHandle rmfh;
+  int CntAttrOffset(TableInfo *tableInfo, int id);
  public:
                                               // Constructor
       QL_Manager (SM_Manager &smm, IX_Manager &ixm, RM_Manager &rmm);
@@ -50,15 +50,22 @@ class QL_Manager {
               int        nConditions,         // # conditions in Where clause
               const Condition conditions[]);  // conditions in Where clause
    RC Update (const char *relName,            // relation to update
-              const RelAttr &updAttr,         // attribute to update
-              const int bIsValue,             // 0/1 if RHS of = is attribute/value
-              const RelAttr &rhsRelAttr,      // attr on RHS of =
-              const Value &rhsValue,          // value on RHS of =
+              int   nUpdAttr, 
+              const RelAttr updAttr[],         // attribute to update
+              const Value rhsValue[],          // value on RHS of =
               int   nConditions,              // # conditions in Where clause
               const Condition conditions[]);  // conditions in Where clause
+ private:
+  RC DeleteOrUpdate (const char *relName,            // relation to delete from
+              int        nConditions,         // # conditions in Where clause
+              const Condition conditions[],
+              int nUpdAttr,
+              const RelAttr updAttr[],
+              const Value rhsValue[]);
 };
 
 #define QL_DATA_NOT_MATCH (START_QL_WARN + 0) // haven't use any database
+#define QL_UNKNOW_COLUMN (START_QL_WARN + 1)
 //#define RM_EOF (START_RM_WARN + 2)
 
 // QL ERR

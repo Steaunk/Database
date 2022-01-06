@@ -51,8 +51,10 @@ static RC test1(){
     char *data;
     rec.GetData(data);
     Data *ans = (Data *)data;
+    cout << "ans.c = " << ans->c << endl;
     assert(ans->c == u->c);
-
+    rc = rms.GetNextRec(rec);
+    assert(rc == RM_EOF);
     cout << "Close File" << endl;
     TRY(rmm.CloseFile(rmfh));
     cout << "Destory File" << endl;
