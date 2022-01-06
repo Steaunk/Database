@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstring>
 #include "../base.h"
 #include "../rm/rm.h"
 #include "../ix/ix.h"
@@ -24,16 +25,18 @@ struct DataAttrInfo {
 
 
 class SM_Manager {
-
   private:
+    IX_Manager *ixm;
+    RM_Manager *rmm;
     bool isOpenDb;
+    std::string RMName(const char *relName);
     void WriteData(const char *relName, TableInfo *data);
     void ReadData(const char *relName, TableInfo *data);
     RC GetColumnIDByName(const char *relName, TableInfo *tableInfo, int &ID);
   public:
        SM_Manager  (IX_Manager &ixm, RM_Manager &rmm);  // Constructor
        ~SM_Manager ();                                  // Destructor
-       SM_Manager  ();                                  // Constructor for test
+       SM_Manager  () = delete;                                  // Constructor for test
     RC OpenDb      (const char *dbName);                // Open database
     RC CloseDb     ();                                  // Close database
     RC CreateDb    (const char *dbName);
@@ -54,11 +57,15 @@ class SM_Manager {
                     const char *fileName);
     RC Help        ();                                  // Help for database
     RC Help        (const char *relName);               // Help for relation
-    RC Print       (const char *relName);               // Print relation
+    RC ShowDbs       ();              // Show Databases
+    RC ShowTables   ();
+    RC DescTable   (const char *relName);
     RC Set         (const char *paramName,              // Set system parameter
                     const char *value);
+    RC GetTableInfo (const char *relName, TableInfo &tableInfo);
 };
 
+void SM_PrintError(RC rc, std::string msg);
 
 // SM WARN
 #define SM_DB_NOT_OPEN (START_SM_WARN + 0) // haven't use any database

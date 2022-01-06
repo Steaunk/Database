@@ -11,6 +11,9 @@ namespace fs = std::filesystem;
 #define FILE1 "test.sql"
 #define FILE2 "test1.sql" 
 
+PF_Manager pfm;
+RM_Manager rmm(pfm);
+IX_Manager ixm(pfm);
 
 static RC test1(){
     fs::path p = fs::current_path();
@@ -22,8 +25,7 @@ static RC test1(){
     //PF_Manager pfm;
     //RM_Manager rm(pfm);
     //IX_Manager ix(pfm);
-    //SM_Manager sm(ix, rm);
-    SM_Manager sm;
+    SM_Manager sm(ixm, rmm);
     cout << "Create Database" << endl;
     TRY(sm.CreateDb("first_db"));
     cout << "Open Database" << endl;
@@ -45,7 +47,7 @@ static RC test2(){
     db2 += "/db2";
     cout << db1 << endl << db2 << endl;
     cout << fs::current_path() << endl;
-    SM_Manager sm;
+    SM_Manager sm(ixm, rmm);
     cout << "Create Database" << endl;
     TRY(sm.CreateDb("db1"));
     TRY(sm.CreateDb("db2"));

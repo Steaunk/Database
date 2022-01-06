@@ -4,6 +4,8 @@
 #include "../ix/ix.h"
 #include "../rm/rm.h"
 
+using namespace std;
+
 struct RelAttr {
   char *relName;     // relation name (may be NULL) 
   char *attrName;    // attribute name              
@@ -27,6 +29,10 @@ struct Condition {
 };
 
 class QL_Manager {
+  SM_Manager *smm;
+  IX_Manager *ixm;
+  RM_Manager *rmm;
+  RM_FileHandle rmfh;
  public:
                                               // Constructor
       QL_Manager (SM_Manager &smm, IX_Manager &ixm, RM_Manager &rmm);
@@ -51,3 +57,9 @@ class QL_Manager {
               int   nConditions,              // # conditions in Where clause
               const Condition conditions[]);  // conditions in Where clause
 };
+
+#define QL_DATA_NOT_MATCH (START_QL_WARN + 0) // haven't use any database
+//#define RM_EOF (START_RM_WARN + 2)
+
+// QL ERR
+//#define SM_CREATE_DB_FAIL (START_SM_ERR - 0) // fail to craete new database

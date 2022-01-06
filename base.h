@@ -68,6 +68,12 @@ enum AttrType {
     STRING
 };
 
+static const char *AttrTypeMsg[3] = {
+    "INT",
+    "FLOAT",
+    "CHAR"
+};
+
 //
 // Comparison operators
 //
