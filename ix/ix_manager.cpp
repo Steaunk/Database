@@ -41,11 +41,12 @@ RC IX_Manager::CreateIndex  (const char *fileName,          // Create new index
   TRY(file.AllocatePage(page));
   char *data;
   TRY(page.GetData(data));
-  std::string data_s = "";
-  data_s += (char)attrType;
-  data_s += (char)attrLength;
-  data_s += "000000001";
-  memcpy(data,data_s.c_str(),sizeof(char) * PF_PAGE_SIZE);
+  data[TYPE_POS] = (char)((int)attrType);
+  setnext(data,1);
+  setprev(data,CHAIN_EOF);
+  setlen(data,attrLength);
+  setroot(data,1);
+
   PageNum pn;
   TRY(page.GetPageNum(pn))
   TRY(file.MarkDirty(pn));
@@ -53,10 +54,11 @@ RC IX_Manager::CreateIndex  (const char *fileName,          // Create new index
 
   TRY(file.AllocatePage(page))
   TRY(page.GetData(data))
-  data_s = "1";
-  data_s += "000000000";
-  data_s += "000";
-  memcpy(data,data_s.c_str(),sizeof(char) * PF_PAGE_SIZE);
+  data[IS_BOTTOM] = '1';
+  setnext(data,CHAIN_EOF);
+  setprev(data,CHAIN_EOF);
+  setsize(data,0);
+
   TRY(page.GetPageNum(pn))
   TRY(file.MarkDirty(pn));
   TRY(file.UnpinPage(pn));
@@ -90,7 +92,7 @@ RC IX_Manager::OpenIndex(const char *fileName,          // Open index
   char *data;
   TRY(page.GetData(data))
   indexHandle.type = (AttrType)((int)data[TYPE_POS]);
-  indexHandle.length = data[LEN_POS];
+  indexHandle.length = getlen(data);
   return OK_RC;
 }
 

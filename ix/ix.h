@@ -4,16 +4,18 @@
 #include "../base.h"
 #include <utility>
 #define TYPE_POS 0
-#define LEN_POS 1
-#define ROOT_POS_START 2
-#define HEADER_LENGTH 11
+#define LEN_START 19
+#define ROOT_POS_START 23
+#define HEADER_LENGTH 32
 #define IS_BOTTOM 0
 #define NEXT_START 1
-#define SIZE_START 10
-#define DATA_HEADER_LENGTH 13
+#define PREV_START 10
+#define SIZE_START 19
+#define DATA_HEADER_LENGTH 22
 #define IX_EOF -1
-#define IX_LENGTH_NOT -2
-#define MAX_INDEX_SIZE 5
+#define IX_LENGTH_ERROR -2
+#define IX_NOT_FOUND -3
+#define MAX_INDEX_SIZE 3
 #define CHAIN_EOF 0
 
 class IX_Manager;
@@ -61,6 +63,7 @@ class IX_IndexHandle {
     std::pair<void *,PageNum> split_add_page(PageNum,void*,PageNum);
     void split_add_root_page(PageNum,void*,PageNum);
     void split_add_root_rid(PageNum,void*,const RID&);
+    void update(PageNum fa, PageNum son, int pos);
   public:
        IX_IndexHandle  ();                             // Constructor
        ~IX_IndexHandle ();                             // Destructor
@@ -96,8 +99,8 @@ class IX_IndexScan {
     RC CloseScan     ();                                 // Terminate index scan
 };
 
-int findpage(char *data, void *pData, AttrType type, int length);
-RID findrid(char *data, void *pData, AttrType type, int length);
+int findpagepos(char *data, void *pData, AttrType type, int length);
+int findridpos(char *data, void *pData, AttrType type, int length);
 int findpos(char *data, void *pData, AttrType type, int length);
 int lower_bound_pos(char *data, void *pData, AttrType type, int length);
 int upper_bound_pos(char *data, void *pData, AttrType type, int length);
@@ -105,5 +108,9 @@ void setsize(char *data, int size);
 int getsize(char *data);
 void setnext(char *data, int pagenum);
 int getnext(char *data);
+void setprev(char *data, int pagenum);
+int getprev(char *data);
 void setroot(char *data, int root);
 int getroot(char *data);
+void setlen(char *data, int len);
+int getlen(char *data);

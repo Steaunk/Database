@@ -5,7 +5,7 @@
 #include <iostream>
 using namespace std;
 
-int findpage(char *data, void *pData, AttrType type, int length){
+int findpagepos(char *data, void *pData, AttrType type, int length){
     int l = 0, r = getsize(data);
     data += DATA_HEADER_LENGTH;
     while(l < r - 1){
@@ -44,10 +44,11 @@ int findpage(char *data, void *pData, AttrType type, int length){
                 break;
         }
     }
-    return *((int*)(data + l * (length + 4) + length));
+    return l;
+    //return *((int*)(data + l * (length + 4) + length));
 }
 
-RID findrid(char *data, void *pData, AttrType type, int length){
+int findridpos(char *data, void *pData, AttrType type, int length){
     int l = 0, r = getsize(data);
     data += DATA_HEADER_LENGTH;
     while(l < r - 1){
@@ -86,9 +87,10 @@ RID findrid(char *data, void *pData, AttrType type, int length){
                 break;
         }
     }
-    int a = *((int*)(data + l * (length + 8) + length)),
-    b = *((int*)(data + l * (length + 8) + length + 4));
-    return RID(a,b);
+    return l;
+    // int a = *((int*)(data + l * (length + 8) + length)),
+    // b = *((int*)(data + l * (length + 8) + length + 4));
+    // return RID(a,b);
 }
 
 int lower_bound_pos(char *data, void *pData, AttrType type, int length){
@@ -195,19 +197,33 @@ int getsize(char *data){
 }
 
 void setnext(char *data, int pagenum){
-    for(int i = SIZE_START - 1; i >= NEXT_START; --i){
+    for(int i = PREV_START - 1; i >= NEXT_START; --i){
         data[i] = pagenum % 10 + '0';
         pagenum /= 10;
     }
 }
 int getnext(char *data){
     int ans = 0;
-    for(int i = NEXT_START; i < SIZE_START; ++i){
+    for(int i = NEXT_START; i < PREV_START; ++i){
         ans = ans * 10 + data[i] - '0';
     }
     return ans;
 }
 
+void setprev(char *data, int pagenum){
+    for(int i = SIZE_START - 1; i >= PREV_START; --i){
+        data[i] = pagenum % 10 + '0';
+        pagenum /= 10;
+    }
+
+}
+int getprev(char *data){
+    int ans = 0;
+    for(int i = PREV_START; i < SIZE_START; ++i){
+        ans = ans * 10 + data[i] - '0';
+    }
+    return ans;
+}
 
 void setroot(char *data, int root){
     for(int i = HEADER_LENGTH - 1; i >= ROOT_POS_START; --i){
@@ -218,6 +234,20 @@ void setroot(char *data, int root){
 int getroot(char *data){
     int ans = 0;
     for(int i = ROOT_POS_START; i < HEADER_LENGTH; ++i){
+        ans = ans * 10 + data[i] - '0';
+    }
+    return ans;
+}
+
+void setlen(char *data, int len){
+    for(int i = ROOT_POS_START - 1; i >= LEN_START; --i){
+        data[i] = len % 10 + '0';
+        len /= 10;
+    }
+}
+int getlen(char *data){
+    int ans = 0;
+    for(int i = LEN_START; i < ROOT_POS_START; ++i){
         ans = ans * 10 + data[i] - '0';
     }
     return ans;
