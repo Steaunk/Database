@@ -26,13 +26,11 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &indexHandle, // Initialize index
                       ClientHint  pinHint){
     
     op = compOp;
-    cout << "op=" << op << endl;
     this->value = value;
     type = indexHandle.type;
     length = indexHandle.length;
     file = indexHandle.file;
     PF_PageHandle pg;
-    PF_PrintError(file.GetFirstPage(pg));
     if(compOp == EQ_OP || compOp == GE_OP){
         PF_PageHandle page;
         TRY(file.GetFirstPage(page));
@@ -40,6 +38,9 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &indexHandle, // Initialize index
         TRY(page.GetData(data));
         int root = getroot(data);
         std::vector<int> nodes;
+        PageNum fpn;
+        TRY(page.GetPageNum(fpn));
+        TRY(file.UnpinPage(fpn));
         int cur = root;
         while(true){
             nodes.push_back(cur);
@@ -49,32 +50,29 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &indexHandle, // Initialize index
                 break;
             }else{
                 cur = lower_bound_pos(data,value,type,length);
-                cur = *((int*)(data + cur * (length + 4) + length + DATA_HEADER_LENGTH));
+                cur = *((int*)(data + (cur-1) * (length + 4) + length + DATA_HEADER_LENGTH));
             }
             PageNum pn;
             page.GetPageNum(pn);
             file.UnpinPage(pn);
         }
         page.GetPageNum(curpage);
-        cout << "size=" << getsize(data) << endl;
-        curslot = lower_bound_pos(data,value,type,length);
-        cout << "curslot=" << curslot << endl;
+        curslot = lower_bound_pos(data,value,type,length) - 1;
+        next(curpage,curslot);
         file.UnpinPage(curpage);
     }
-    if(compOp == GT_OP){
+    else if(compOp == GT_OP){
         PF_PageHandle page;
-        cout << "here1" << endl;
         TRY(file.GetFirstPage(page));
-        cout << "here2" << endl;
         char *data;
         TRY(page.GetData(data));
-        cout << "here3" << endl;
         int root = getroot(data);
         std::vector<int> nodes;
         int cur = root;
-        cout << "here4" << endl;
+        PageNum fpn;
+        TRY(page.GetPageNum(fpn));
+        TRY(file.UnpinPage(fpn));
         while(true){
-            cout << "cur=" << cur << endl;
             nodes.push_back(cur);
             TRY(file.GetThisPage(cur,page));
             TRY(page.GetData(data));
@@ -89,18 +87,24 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &indexHandle, // Initialize index
             file.UnpinPage(pn);
         }
         page.GetPageNum(curpage);
-        cout << "size=" << getsize(data) << endl;
         curslot = upper_bound_pos(data,value,type,length) - 1;
         next(curpage,curslot);
-        cout << "curslot=" << curslot << endl;
         file.UnpinPage(curpage);
+    }else{
+        PF_PageHandle page;
+        TRY(file.GetFirstPage(page));
+        char *data;
+        TRY(page.GetData(data));
+        curpage = getnext(data);
+        PageNum fpn;
+        TRY(page.GetPageNum(fpn));
+        TRY(file.UnpinPage(fpn));
+        curslot = 0;
     }
     return OK_RC;                      
 }
 
 RC IX_IndexScan::GetNextEntry (RID &rid){
-    cout << "getting next entry" << endl;
-    cout << notacc(curpage,curslot) << endl;
     if(curpage == CHAIN_EOF){
         return IX_EOF;
     }
@@ -113,7 +117,6 @@ RC IX_IndexScan::GetNextEntry (RID &rid){
         next(curpage,curslot);
         if(curpage == CHAIN_EOF)break;
     }
-    cout << "end getting next entry" << endl;
     return OK_RC;
 }
 
@@ -124,9 +127,7 @@ RC IX_IndexScan::getrid(const PageNum &PageNum, const SlotNum &SlotNum, RID &rid
     TRY(page.GetData(data));
     int a = *((int*)(data + SlotNum * (length + 8) + length + DATA_HEADER_LENGTH)),
     b = *((int*)(data + SlotNum * (length + 8) + length + 4 +DATA_HEADER_LENGTH));
-    cout << "SlotNum = " << SlotNum << endl;
     rid = RID(a,b);
-    cout << a << " " << b << endl;
     return OK_RC;
 }
 
@@ -154,7 +155,6 @@ bool IX_IndexScan::notacc(const PageNum &pagenum,const SlotNum &slotnum){
     {
         case INT:
             /* code */
-            cout << *(int*)qData << " " << *(int*)value << endl;
             switch (op)
             {
                 case EQ_OP:

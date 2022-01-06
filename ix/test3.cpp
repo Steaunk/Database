@@ -33,8 +33,49 @@ int main(){
 		t1.p = RID(i,i);
 		ixh.InsertEntry(&t1.a,t1.p);
 	}
-	int t = 5;
-	ixs.OpenScan(ixh,EQ_OP,&t);
+	for(int i = 10; i >= 0; --i){
+		t1.a = i;
+		t1.p = RID(i,i);
+		ixh.DeleteEntry(&t1.a,t1.p);
+	}
+	for(int i = 20; i >= 18; --i){
+		t1.a = i;
+		t1.p = RID(i,i);
+		ixh.InsertEntry(&t1.a,t1.p);
+	}
+	for(int i = 0; i <= 4; ++i){
+		t1.a = i;
+		t1.p = RID(i,i);
+		ixh.InsertEntry(&t1.a,t1.p);
+	}
+	for(int i = 17; i >= 5; --i){
+		t1.a = i;
+		t1.p = RID(i,i);
+		ixh.InsertEntry(&t1.a,t1.p);
+	}
+	for(int i = 0; i <= 12; ++i){
+		t1.a = i;
+		t1.p = RID(i,i);
+		ixh.DeleteEntry(&t1.a,t1.p);
+	}
+	for(int i = 100; i >= 71; --i){
+		t1.a = i;
+		t1.p = RID(i,i);
+		ixh.InsertEntry(&t1.a,t1.p);
+	}
+	for(int i = 21; i <= 70; ++i){
+		t1.a = i;
+		t1.p = RID(i,i);
+		ixh.InsertEntry(&t1.a,t1.p);
+	}
+	for(int i = 54; i <= 98; ++i){
+		t1.a = i;
+		t1.p = RID(i,i);
+		ixh.DeleteEntry(&t1.a,t1.p);
+	}
+	int t = 50;
+	ixh.DeleteEntry(&t, RID(50,50));
+	ixs.OpenScan(ixh,GE_OP,&t);
 	RID ans;
 	ixs.GetNextEntry(ans);
 	PageNum p;
@@ -42,8 +83,21 @@ int main(){
 	ans.GetPageNum(p);
 	ans.GetSlotNum(s);
 	cout << p << " " << s << endl;
-	assert(ans==RID(5,5));
+	assert(ans==RID(51,51));
+	assert(ixs.GetNextEntry(ans) != -1);
+	assert(ixh.DeleteEntry(&t, RID(5,5)) == -3);
+	assert(ans==RID(52,52));
+	assert(ixs.GetNextEntry(ans) != -1);
+	assert(ans==RID(53,53));
+	assert(ixs.GetNextEntry(ans) != -1);
+	assert(ans==RID(99,99));
+	assert(ixs.GetNextEntry(ans) != -1);
+	assert(ans==RID(100,100));
 	assert(ixs.GetNextEntry(ans) == -1);
+	ixs.OpenScan(ixh,LE_OP,&t);
+	assert(ixs.GetNextEntry(ans) != -1);
+	assert(ans==RID(13,13));
+	cout << "OK" << endl;
 	ixm.CloseIndex(ixh);
 	ixm.DestroyIndex("test_index",0);
 	return 0;
