@@ -63,6 +63,10 @@ class SM_Manager {
     RC Set         (const char *paramName,              // Set system parameter
                     const char *value);
     RC GetTableInfo (const char *relName, TableInfo &tableInfo);
+
+    std::string RelNameCat(const char *relNameA, const char *relNameB); //数据表名字拼接
+    std::string AttrNameCat(const char *relName, const char *attrName); //数据表与字段名字拼接
+    RC InnerJoin(const char *relNameA, const char *relNameB, int nConditions, const Condition conditions[]); //Inner Join
 };
 
 void SM_PrintError(RC rc, std::string msg);
