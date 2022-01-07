@@ -50,6 +50,7 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &indexHandle, // Initialize index
                 break;
             }else{
                 cur = lower_bound_pos(data,value,type,length);
+                if(cur == 0)cur = 1;
                 cur = *((int*)(data + (cur-1) * (length + 4) + length + DATA_HEADER_LENGTH));
             }
             PageNum pn;
@@ -80,6 +81,7 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &indexHandle, // Initialize index
                 break;
             }else{
                 cur = upper_bound_pos(data,value,type,length);
+                if(cur == 0)cur = 1;
                 cur = *((int*)(data + (cur-1) * (length + 4) + length + DATA_HEADER_LENGTH));
             }
             PageNum pn;
@@ -119,6 +121,9 @@ RC IX_IndexScan::GetNextEntry (RID &rid){
     }
     return OK_RC;
 }
+
+PageNum IX_IndexScan::GetPageNum(){return curpage;}
+SlotNum IX_IndexScan::GetSlotNum(){return curslot;}
 
 RC IX_IndexScan::getrid(const PageNum &Pagenum, const SlotNum &Slotnum, RID &rid){
     PF_PageHandle page;

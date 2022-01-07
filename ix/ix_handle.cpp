@@ -74,6 +74,25 @@ RC IX_IndexHandle::InsertEntry(void *pData, const RID &rid){
 }
 
 RC IX_IndexHandle::DeleteEntry(void *pData, const RID &rid){
+    IX_IndexScan temp;
+    temp.OpenScan(*this,EQ_OP,pData);
+    PageNum sp;
+    SlotNum ss;
+    sp = temp.GetPageNum(), ss = temp.GetSlotNum();
+    RID ans;
+    while(true){
+        if(temp.GetNextEntry(ans) == IX_EOF){
+            return IX_NOT_FOUND;
+        }
+        if(ans == rid){
+            break;
+        }
+        sp = temp.GetPageNum(), ss = temp.GetSlotNum();
+    }
+    return _DeleteEntry(pData, rid, sp, ss);
+}
+
+RC IX_IndexHandle::_DeleteEntry(void *pData, const RID &rid, PageNum PN, SlotNum SN){
     PF_PageHandle page;
     TRY(file.GetFirstPage(page));
     char *data;
@@ -113,8 +132,44 @@ RC IX_IndexHandle::DeleteEntry(void *pData, const RID &rid){
             char *ipos = data + pos;
             int a = *((int*)(ipos + length)),
             b = *((int*)(ipos + length + 4));
-            if(RID(a,b) == rid){
+            bool equ = 0;
+            switch (type)
+            {
+                case INT:
+                    /* code */
+                    if(*((int*)ipos) == *((int*)pData)){
+                        equ=1;
+                    }
+                    break;
+                case FLOAT:
+                    /* code */
+                    if(*((float*)ipos) == *((float*)pData)){
+                        equ=1;
+                    }
+                    break;
+                case STRING:
+                    /* code */
+                    if(strcmp((char*)ipos,(char*)pData) == 0){
+                        equ=1;
+                    }
+                    break;
+                
+                default:
+                    break;
+            }
+            if(RID(a,b) == rid || (equ && PN != cur)){
                 f = 1;
+                if(PN != cur){
+                    PF_PageHandle temppage;
+                    file.GetThisPage(PN,temppage);
+                    char *tempdata;
+                    temppage.GetData(tempdata);
+                    RID temp = RID(a,b);
+                    memcpy(tempdata + SN*(length + 8) + DATA_HEADER_LENGTH + length
+                    , &temp, sizeof(rid));
+                    file.MarkDirty(PN);
+                    file.UnpinPage(PN);
+                }
                 for(int j = 0; j < length + 8; ++j){
                     data[pos+j] = data[pos+length+8+j];
                 }
