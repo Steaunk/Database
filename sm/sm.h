@@ -68,15 +68,9 @@ class SM_Manager {
                     const char *value);
     RC GetTableInfo (const char *relName, TableInfo &tableInfo);
 
-<<<<<<< HEAD
     std::string RelNameCat(const char *relNameA, const char *relNameB); //数据表名字拼接
     std::string AttrNameCat(const char *relName, const char *attrName); //数据表与字段名字拼接
     RC InnerJoin(const char *relNameA, const char *relNameB); //Inner Join
-=======
-    //std::string RelNameCat(const char *relNameA, const char *relNameB); //数据表名字拼接
-    //std::string AttrNameCat(const char *relName, const char *attrName); //数据表与字段名字拼接
-    //RC InnerJoin(const char *relNameA, const char *relNameB, int nConditions, const Condition conditions[]); //Inner Join
->>>>>>> 7580eb61445739f7c9b0e2f265dbe098c6d81648
 };
 
 void SM_PrintError(RC rc, std::string msg);
@@ -87,13 +81,9 @@ void SM_PrintError(RC rc, std::string msg);
 #define SM_DB_NOT_EXISTS (START_SM_WARN + 2)
 #define SM_TABLE_EXISTS (START_SM_WARN + 3)
 #define SM_TABLE_NOT_EXISTS (START_SM_WARN + 4)
-<<<<<<< HEAD
-#define SM_UNKNOW_COLUMN (START_SM_WARN + 5)
-=======
 #define SM_UNKNOW_COLUMN (START_QL_WARN + 5)
 #define SM_DUPLICATE_KEY (START_QL_WARN + 6)
 #define SM_DUPLICATE_ENTRY (START_QL_WARN + 7)
->>>>>>> 7580eb61445739f7c9b0e2f265dbe098c6d81648
 //#define RM_EOF (START_RM_WARN + 2)
 
 // SM ERR
