@@ -96,3 +96,5 @@ void SM_PrintError(RC rc, std::string msg);
 #define SM_DB_CLOSE_ERR (START_SM_ERR - 2) // can't close database
 #define SM_DB_DUPLICATE_INDEX (START_SM_ERR - 3) //duplicate index
 #define SM_DB_WRONG_INDEX (START_SM_ERR - 4) //create a index which is not in column
+#define SM_DB_INDEX_FULL (START_SM_ERR - 5) //index overflow
+#define SM_DB_NO_INDEX (START_SM_ERR - 6) //delete wrong index
