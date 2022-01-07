@@ -55,6 +55,8 @@ class QL_Manager {
               const Value rhsValue[],          // value on RHS of =
               int   nConditions,              // # conditions in Where clause
               const Condition conditions[]);  // conditions in Where clause
+   RC AddIndex (const char *relName,            // relation to update
+              const char *attrName);        // attribute to update
  private:
   RC DeleteOrUpdate (const char *relName,            // relation to delete from
               int        nConditions,         // # conditions in Where clause

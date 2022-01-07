@@ -64,6 +64,7 @@ class IX_IndexHandle {
     void split_add_root_page(PageNum,void*,PageNum);
     void split_add_root_rid(PageNum,void*,const RID&);
     void update(PageNum fa, PageNum son, int pos);
+    RC _DeleteEntry     (void *pData, const RID &rid, PageNum pn, SlotNum sn);  // Delete index entry
   public:
        IX_IndexHandle  ();                             // Constructor
        ~IX_IndexHandle ();                             // Destructor
@@ -96,6 +97,8 @@ class IX_IndexScan {
                       void        *value,
                       ClientHint  pinHint = NO_HINT);           
     RC GetNextEntry  (RID &rid);                         // Get next matching entry
+    PageNum GetPageNum();
+    SlotNum GetSlotNum();
     RC CloseScan     ();                                 // Terminate index scan
 };
 

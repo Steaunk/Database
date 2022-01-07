@@ -93,6 +93,19 @@ int main(){
 	ixs.OpenScan(ixh,LE_OP,&t);
 	assert(ixs.GetNextEntry(ans) != -1);
 	assert(ans==RID(13,13));
+	for(int i = 1; i <= 100; ++i){
+		t = 59;
+		ixh.InsertEntry(&t,RID(i,i));
+	}
+	cout << ixh.DeleteEntry(&t, RID(50,50)) << endl;
+	//assert(ixh.DeleteEntry(&t, RID(50, 50)) == 0);
+	ixs.OpenScan(ixh,EQ_OP,&t);
+	assert(ixs.GetNextEntry(ans) != -1);
+	for(int i = 1; i <= 99; ++i){
+		ans.GetPageNum(p),ans.GetSlotNum(s);
+		cout << p << " " << s << endl;
+		assert(ixs.GetNextEntry(ans)!=-1 || i == 99);
+	}
 	cout << "OK" << endl;
 	TRY(ixm.CloseIndex(ixh));
 	TRY(ixm.DestroyIndex("test_index",0));

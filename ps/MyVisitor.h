@@ -216,7 +216,9 @@ class MyVisitor:public SQLBaseVisitor{
         return visitChildren(ctx);
     }
     
-
+    virtual antlrcpp::Any visitAlter_add_index(SQLParser::Alter_add_indexContext *ctx) override {
+        return visitChildren(ctx);
+    }
 
 
 };
