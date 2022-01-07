@@ -4,6 +4,7 @@
 #include "../base.h"
 #include "../rm/rm.h"
 #include "../ix/ix.h"
+#include "../pf/pf.h"
 #include "sm_internal.h"
 #include <string>
 

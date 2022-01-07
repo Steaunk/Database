@@ -1,6 +1,7 @@
 set(HEADER
         ${HEADER}
         ${CMAKE_CURRENT_SOURCE_DIR}/sm.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/sm_internal.h
 )
 set(SOURCE
         ${SOURCE}
