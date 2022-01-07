@@ -2,7 +2,10 @@ set(HEADER
         ${HEADER}
         ${CMAKE_CURRENT_SOURCE_DIR}/sm.h
         ${CMAKE_CURRENT_SOURCE_DIR}/sm_internal.h
+<<<<<<< HEAD
 
+=======
+>>>>>>> de089d84b74d92177a924a3dc54bdc3d52a4299b
 )
 set(SOURCE
         ${SOURCE}
