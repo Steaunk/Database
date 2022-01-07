@@ -57,6 +57,8 @@ class SM_Manager {
     RC AddPrimaryKey (const char *relName,
                       int keyNum,
                       const AttrInfo *attributes);
+
+    RC DropPrimaryKey (const char *relName);
     RC Load        (const char *relName,                // Load utility
                     const char *fileName);
     RC Help        ();                                  // Help for database

@@ -34,6 +34,9 @@ void SM_PrintError(RC rc, std::string msg = "")
   /*case SM_UNKNOW_COLUMN:
     cerr << "Unknown column '" << msg << "'\n";
     break;*/
+  case SM_DUPLICATE_ENTRY:
+    cerr << "Duplicated entry for key\n";
+    break;
   case OK_RC: 
     cerr << "SM : I'm healthy!\n";
     break;

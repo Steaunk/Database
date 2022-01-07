@@ -73,7 +73,7 @@ class MyVisitor:public SQLBaseVisitor{
         else {
             RC rc = sm->CreateTable(s.c_str(), cnt, attrInfo);
             if(rc != OK_RC) SM_PrintError(rc, s.c_str());
-            else {
+            else if(cnt2 == 1){
                 rc = sm->AddPrimaryKey(s.c_str(), cnt3, attrInfo2);
                 if(rc != OK_RC){
                     sm->DropTable(s.c_str());
@@ -210,7 +210,21 @@ class MyVisitor:public SQLBaseVisitor{
         return retval;
     }
 
-
+    virtual antlrcpp::Any visitAlter_table_add_pk(SQLParser::Alter_table_add_pkContext *ctx) override {
+        std::string s = ctx->Identifier(0)->getSymbol()->getText();
+        std::string c = ctx->Identifier(1)->getSymbol()->getText();
+        int size = ctx->identifiers()->Identifier().size();
+        attrInfo = new AttrInfo[size];
+        int u = 0;
+        for(auto i : ctx->identifiers()->Identifier()){
+            attrInfo[u].attrName = (char *)malloc(i->getText().length());
+            strcpy(attrInfo[u].attrName, i->getText().c_str());
+        }
+        RC rc = sm->AddPrimaryKey(s.c_str(), size, attrInfo);
+        if(rc != OK_RC){ SM_PrintError(rc, s); }
+        else std::cout << "Primary key added\n";
+        return visitChildren(ctx);
+    }
 
     virtual antlrcpp::Any visitWhere_operator_expression(SQLParser::Where_operator_expressionContext *ctx) override {
         //cout << &(ctx->column()) << " ???? " << end;;
@@ -243,7 +257,7 @@ class MyVisitor:public SQLBaseVisitor{
         return visitChildren(ctx);
     }
     
-
+     
 
 
 };

@@ -115,8 +115,15 @@ RC SM_Manager::CreateTable(const char *relName,
 RC SM_Manager::DropTable   (const char *relName){
     if(isOpenDb == false) return SM_DB_NOT_OPEN;
     if(!fs::exists(relName)) return SM_TABLE_NOT_EXISTS;
+
+    TableInfo tableInfo;
+    ReadData(relName, &tableInfo);
+    for(int i = 0; i < tableInfo.indexNum; ++i)
+        TRY(ixm->DestroyIndex(relName, i));
+
     fs::remove(relName);
-    rmm->DestroyFile(RMName(relName).c_str());
+    TRY(rmm->DestroyFile(RMName(relName).c_str()));
+
     std::cout << "Table '" << relName << "' dropped\n";
     return OK_RC;
 }               // Destroy relation
@@ -129,27 +136,29 @@ RC SM_Manager::DescTable(const char *relName){
     TableInfo tableInfo;
     ReadData(relName, &tableInfo);
 
-    std::cout << "### 数据表 " << relName << std::endl;
+    std::cout << "### 数据表 " << relName << "\n\n";
 
     for(int i = 0; i < tableInfo.columnNum; ++i){
-        std::cout << tableInfo.columnAttr[i].name << " " << tableInfo.columnAttr[i].attrLength << " ";
+        std::cout << tableInfo.columnAttr[i].name << " ";
         switch (tableInfo.columnAttr[i].attrType)
         {
         case INT:
-            std::cout << "INT" << std::endl;
+            std::cout << "INT ";
             break;
         case FLOAT:
-            std::cout << "FLOAT" << std::endl;
+            std::cout << "FLOAT ";
             break;
         case STRING:
-            std::cout << "CHAR(" << tableInfo.columnAttr[i].attrLength << ")" << std::endl;
+            std::cout << "CHAR(" << tableInfo.columnAttr[i].attrLength << ") ";
             break;
         default:
             break;
         }
+        if(tableInfo.columnAttr[i].isPrimaryKey) std::cout << "PRI ";
+        std::cout << std::endl;
     }
 
-    std::cout << "总计：" << tableInfo.columnNum << std::endl;
+    std::cout << "\n总计：" << tableInfo.columnNum << std::endl;
     return OK_RC;
 
 }
@@ -245,6 +254,9 @@ RC SM_Manager::ReadData(const char *relName, TableInfo *data){
 }
 
 RC SM_Manager::AddPrimaryKey(const char *relName, int keyNum, const AttrInfo *attributes){
+    if(isOpenDb == false) return SM_DB_NOT_OPEN;
+    if(!fs::exists(relName)) return SM_TABLE_NOT_EXISTS;
+   
     TableInfo tableInfo;
     TRY(ReadData(relName, &tableInfo));
     if(tableInfo.primaryKey.keyNum > 0) return SM_DUPLICATE_KEY;
@@ -271,9 +283,10 @@ RC SM_Manager::AddPrimaryKey(const char *relName, int keyNum, const AttrInfo *at
 
     int first_key_id = tableInfo.primaryKey.columnID[0];
     auto &first_key = tableInfo.columnAttr[first_key_id];
-    ixm->CreateIndex(relName, tableInfo.indexNum, first_key.attrType, first_key.attrLength);
+    ixm->CreateIndex(relName, -1, first_key.attrType, first_key.attrLength);
+    ixm->CreateIndex(relName, 0, first_key.attrType, first_key.attrLength);
     IX_IndexHandle ixih;
-    ixm->OpenIndex(relName, tableInfo.indexNum, ixih);
+    ixm->OpenIndex(relName, -1, ixih);
     RM_FileHandle rmfh;
     rmm->OpenFile(RMName(relName).c_str(), rmfh);
     RM_FileScan rmfs;
@@ -288,6 +301,7 @@ RC SM_Manager::AddPrimaryKey(const char *relName, int keyNum, const AttrInfo *at
         char *data;
         RID rid;
         rec.GetData(data);
+        debug("AddPrimaryKey data = %d\n", *((int *)(data + 4)));
         ixis.OpenScan(ixih, EQ_OP, data + pkOffset[0]);  
         rc = ixis.GetNextEntry(rid);
         if(rc == IX_EOF) flag = true;
@@ -311,18 +325,33 @@ RC SM_Manager::AddPrimaryKey(const char *relName, int keyNum, const AttrInfo *at
         rec.GetRid(rid);
         ixih.InsertEntry(data + pkOffset[0], rid);
     }
-
+    debug("AddPrimaryKey flag = %d\n", flag);
     if(flag == false){
-        ixm->DestroyIndex(relName, tableInfo.indexNum);
+        ixm->CloseIndex(ixih);
+        ixm->DestroyIndex(relName, -1);
         if(rc == OK_RC){
             rc = SM_DUPLICATE_ENTRY;
             return rc;
         }
     }
 
-    strcpy(tableInfo.index[tableInfo.indexNum].name, "Primary");
-    tableInfo.index[tableInfo.indexNum].columnID = tableInfo.primaryKey.columnID[0];
-    tableInfo.indexNum++;
+    ixm->CloseIndex(ixih);
+    WriteData(relName, &tableInfo);
+
+    return OK_RC;
+}
+
+RC SM_Manager::DropPrimaryKey(const char *relName){
+    if(isOpenDb == false) return SM_DB_NOT_OPEN;
+    if(!fs::exists(relName)) return SM_TABLE_NOT_EXISTS;
+
+    TableInfo tableInfo;
+    ReadData(relName, &tableInfo);
+    if(tableInfo.primaryKey.keyNum == 0) return OK_RC;
+    for(int i = 0; i < tableInfo.primaryKey.keyNum; ++i){
+        tableInfo.columnAttr[tableInfo.primaryKey.columnID[i]].isPrimaryKey = false;        
+    }
+    
     WriteData(relName, &tableInfo);
     return OK_RC;
 }
