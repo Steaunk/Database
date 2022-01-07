@@ -93,6 +93,10 @@ RC IX_Manager::OpenIndex(const char *fileName,          // Open index
   TRY(page.GetData(data))
   indexHandle.type = (AttrType)((int)data[TYPE_POS]);
   indexHandle.length = getlen(data);
+  PageNum pn;
+  TRY(page.GetPageNum(pn))
+  TRY(file.MarkDirty(pn));
+  TRY(file.UnpinPage(pn));
   return OK_RC;
 }
 
