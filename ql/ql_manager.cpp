@@ -20,6 +20,7 @@ RC QL_Manager::Insert  (const char  *relName,           // relation to insert in
             int         nValues,            // # values to insert
             const Value values[]){
     //主键约束 TODO
+    RC rc = OK_RC;
     TableInfo tableInfo;
     TRY(smm->GetTableInfo(relName, tableInfo));
     if(nValues != tableInfo.columnNum) return QL_DATA_NOT_MATCH;
@@ -44,13 +45,10 @@ RC QL_Manager::Insert  (const char  *relName,           // relation to insert in
 
     }
     //memcpy(data, &values)
-    RID rid;
-    RM_FileHandle rmfh;
-    rmm->OpenFile(smm->RMName(relName).c_str(), rmfh);
-    rmfh.InsertRec(data, rid);
-    rmm->CloseFile(rmfh);
+    rc = CheckPrimaryKey(relName, data);
+    if(rc == OK_RC) rc = InsertAll(tableInfo, data);
     free(data);
-    return OK_RC;
+    return rc;
 
 }          // values to insert
 
@@ -86,6 +84,7 @@ RC QL_Manager::DeleteOrUpdate (const char *relName,            // relation to de
             const RelAttr updAttr[],
             const Value rhsValue[]
 ){
+
     debug("Delete nUpdAttr = %d\n", nUpdAttr);
     RC rc;
     TableInfo tableInfo;
@@ -192,7 +191,7 @@ RC QL_Manager::DeleteOrUpdate (const char *relName,            // relation to de
         std::cout << "(" << *((int *)data) << ")" << std::endl;
         for(int i = 0; i < nConditions; ++i){
             auto &c = conditions[i];
-            if(!rmfs.Comp(attrType[i], attrLength[i], c.op, 
+            if(!RM_FileHandle::Comp(attrType[i], attrLength[i], c.op, 
                             (void *)(data + lAttrOffset[i]),
                             (void *)(c.bRhsIsAttr ? (data + rAttrOffset[i]) : c.rhsValue.data)
                         )
@@ -225,5 +224,85 @@ RC QL_Manager::DeleteOrUpdate (const char *relName,            // relation to de
     rmm->CloseFile(rmfh);
     if(nUpdAttr == 0) std::cout << "Query OK, " << cnt << " rows deleted\n";
     else std::cout << "Query OK, " << cnt << " rows updated\n";
+    return OK_RC;
+}
+
+RC QL_Manager::CheckPrimaryKey(const char *relName, char *data, int *offset){
+    TableInfo tableInfo;
+    TRY(smm->GetTableInfo(relName, tableInfo));
+
+    if(tableInfo.primaryKey.keyNum == 0) return OK_RC;
+
+    bool remember2delete = false;
+    if(offset == nullptr){
+        offset = new int[tableInfo.primaryKey.keyNum];
+        for(int i = 0; i  < tableInfo.primaryKey.keyNum; ++i)
+            CntAttrOffset(&tableInfo, offset[i]);
+        remember2delete = true;
+    }
+
+    IX_IndexHandle ixih;
+    ixm->OpenIndex(relName, -1, ixih);
+    IX_IndexScan ixis;
+    RM_FileHandle rmfh;
+    rmm->OpenFile(smm->RMName(relName).c_str(), rmfh);
+    //int offset = CntAttrOffset(&tableInfo, tableInfo.primaryKey.columnID[0]);
+    ixis.OpenScan(ixih, EQ_OP, data + offset[0]);
+    RID rid;
+    RM_Record trec;
+    char *tdata;
+    RC rc;
+    debug("WHST?\n");
+    while((rc = ixis.GetNextEntry(rid)) != IX_EOF){
+        debug("HERE");
+        rc = rmfh.GetRec(rid, trec);
+        if(rc != OK_RC) break;
+        bool flag = false;
+        trec.GetData(tdata);
+        for(int i = 1; i < tableInfo.primaryKey.keyNum; ++i){
+            auto &t = tableInfo.columnAttr[tableInfo.primaryKey.columnID[i]];
+            debug("CheckPrimaryKey [%d %d] [%d %d]\n", *((int *)(data)), *((int *)(data + 4)), *((int *)(tdata)), *((int *)(tdata + 4)));
+            if(RM_FileHandle::Comp(t.attrType, t.attrLength, EQ_OP, data + offset[i], tdata + offset[i]) == false){
+                flag = true;
+                break;
+            }
+        }
+        if(flag == false){
+            rc = QL_DUPLICATE_ENTRY;
+            break;
+        }
+    }
+
+    if(rc == IX_EOF) rc = OK_RC;
+
+    ixm->CloseIndex(ixih);
+    rmm->CloseFile(rmfh);
+    if(remember2delete) delete offset;
+    return rc;
+
+}
+
+RC QL_Manager::InsertAll(TableInfo &tableInfo, char *data){
+    RM_FileHandle rmfh;
+    rmm->OpenFile(tableInfo.name, rmfh);
+    RID rid;
+    rmfh.InsertRec(data, rid);
+    rmm->CloseFile(rmfh);
+
+    debug("InsertAll Middle\n");
+    IX_IndexHandle ixih;
+    for(int i = 0; i < MAX_INDEX_NUM; ++i) if(tableInfo.index[i].columnID != -1){
+        debug("InsertAll i = %d\n", i);
+        ixm->OpenIndex(tableInfo.name, i, ixih);
+        ixih.InsertEntry(data + CntAttrOffset(&tableInfo, tableInfo.index[i].columnID), rid);
+        ixm->CloseIndex(ixih);
+    }
+
+    if(tableInfo.primaryKey.keyNum > 0){
+        ixm->OpenIndex(tableInfo.name, -1, ixih);
+        ixih.InsertEntry(data + CntAttrOffset(&tableInfo, tableInfo.primaryKey.columnID[0]), rid);
+        ixm->CloseIndex(ixih);
+    }
+
     return OK_RC;
 }

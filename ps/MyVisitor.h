@@ -162,15 +162,15 @@ class MyVisitor:public SQLBaseVisitor{
                 ++i;
             }
             RC rc = qlm->Insert(s.c_str(), i, value);
-            if(rc == OK_RC) ;
-            else if(rc == QL_DATA_NOT_MATCH){
+            if(rc == OK_RC);
+            else if(rc == QL_DATA_NOT_MATCH || rc == QL_DUPLICATE_ENTRY){
                 //std::cout << vl->getText() << " : type error\n";
                 cnt_f++;
             }
             else {
                 SM_PrintError(rc, s);
                 return visitChildren(ctx);
-            }
+            } 
             cnt_s++;
         }
         std::cout << "Query OK, " << cnt_s << " rows affected, " << cnt_f << " rows failed " << std::endl;

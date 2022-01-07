@@ -300,26 +300,31 @@ RC SM_Manager::AddPrimaryKey(const char *relName, int keyNum, const AttrInfo *at
         char *data;
         RID rid;
         rec.GetData(data);
-        debug("AddPrimaryKey data = %d\n", *((int *)(data + 4)));
+        //debug("AddPrimaryKey data = %d\n", *((int *)(data + 4)));
         ixis.OpenScan(ixih, EQ_OP, data + pkOffset[0]);  
-        rc = ixis.GetNextEntry(rid);
-        if(rc == IX_EOF) flag = true;
-        if(flag == false){
-            RM_Record trec;
-            char *tdata;
-            
+        RM_Record trec;
+        char *tdata;
+
+        flag = true;
+        while((rc = ixis.GetNextEntry(rid)) != IX_EOF){
             rc = rmfh.GetRec(rid, trec);
             if(rc != OK_RC) break;
 
+            bool fflag = false;
             trec.GetData(tdata);
             for(int i = 1; i < keyNum; ++i){
                 auto &t = tableInfo.columnAttr[tableInfo.primaryKey.columnID[i]];
-                if(rmfs.Comp(t.attrType, t.attrLength, EQ_OP, data + pkOffset[i], tdata + pkOffset[i]) == false){
-                    flag = true;
+                if(RM_FileHandle::Comp(t.attrType, t.attrLength, EQ_OP, data + pkOffset[i], tdata + pkOffset[i]) == false){
+                    fflag = true;
                     break;
                 }
             }
+            if(fflag == false){
+                flag = false;
+                break;
+            }
         }
+        if(rc == IX_EOF) flag = true;
         if(flag == false) break;
         rec.GetRid(rid);
         ixih.InsertEntry(data + pkOffset[0], rid);

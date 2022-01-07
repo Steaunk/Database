@@ -110,6 +110,12 @@ public:
     RC ForcePages (PageNum pageNum = ALL_PAGES);
 
     RC FindNextSlot(SlotNum &slotNum, PageNum pageNum, char *&data);
+
+    static bool Comp(AttrType attrType, 
+                    int attrLength, 
+                    CompOp compOp,
+                    void *lvalue,
+                    void *rvalue);
 };
 
 //
@@ -138,12 +144,6 @@ public:
                   ClientHint pinHint = NO_HINT); // Initialize a file scan
     RC GetNextRec(RM_Record &rec);               // Get next matching record
     RC CloseScan ();                             // Close the scan
-    bool Comp(AttrType attrType,
-            int attrLength,
-            CompOp compOp,
-            void *lvalue,
-            void *rvalue
-            );
 };
 
 //

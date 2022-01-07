@@ -49,7 +49,7 @@ RC RM_FileScan::GetNextRec(RM_Record &rec){
         }
         else{
             //debug("GetNextRec while data : %d\n", *((int *)data+4));
-            notFound = !Comp(attrType, attrLength, compOp, data + attrOffset, value);
+            notFound = !RM_FileHandle::Comp(attrType, attrLength, compOp, data + attrOffset, value);
         }
     }
     while(notFound);
@@ -63,42 +63,4 @@ RC RM_FileScan::GetNextRec(RM_Record &rec){
 RC RM_FileScan::CloseScan(){
     this->isOpen = false;
 	return OK_RC;
-}
-
-bool RM_FileScan::Comp(AttrType attrType, 
-                    int attrLength, 
-                    CompOp compOp,
-                    void *lvalue,
-                    void *rvalue){
-    bool flag;
-    switch (compOp)
-    {
-    case NO_OP: return true;
-
-    case EQ_OP:
-    case NE_OP:
-        if(attrType == INT) flag = (*((int *)lvalue) == *((int *)rvalue));
-        else if(attrType == FLOAT) flag = (*((float *)lvalue) == *((float *)rvalue));
-        else flag = strncmp((char *)lvalue, (char *)rvalue, attrLength) == 0; 
-        debug("COMP flag = %d (%d %d)\n", flag, *((int *)lvalue), *((int *)rvalue));
-        return compOp == NE_OP ? !flag : flag;
-
-    case LT_OP:
-    case GE_OP:
-        if(attrType == INT) flag = (*((int *)lvalue) < *((int *)rvalue));
-        else if(attrType == FLOAT) flag = (*((float *)lvalue) < *((float *)rvalue));
-        else flag = strncmp((char *)lvalue, (char *)rvalue, attrLength) < 0;
-        return compOp == GE_OP ? !flag : flag;
-
-    case GT_OP:
-    case LE_OP:
-        if(attrType == INT) flag = (*((int *)lvalue) > *((int *)rvalue));
-        else if(attrType == FLOAT) flag = (*((float *)lvalue) > *((float *)rvalue));
-        else flag = strncmp((char *)lvalue, (char *)rvalue, attrLength) > 0;
-        return compOp == LE_OP ? !flag : flag;
-
-    default:
-        break;
-    }
-    return false;
 }
