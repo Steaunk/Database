@@ -32,7 +32,9 @@ RC IX_Manager::CreateIndex  (const char *fileName,          // Create new index
                              int        attrLength){
   std::string indexFileName = fileName;
   indexFileName += '.';
-  indexFileName += indexNo+'0';
+  char number[25];
+  sprintf(number,"%d",indexNo);
+  indexFileName += number;
   TRY(pfmp->CreateFile(indexFileName.c_str()));
   PF_FileHandle file;
   TRY(pfmp->OpenFile(indexFileName.c_str(),file));
@@ -82,7 +84,9 @@ RC IX_Manager::OpenIndex(const char *fileName,          // Open index
                           IX_IndexHandle &indexHandle){
   std::string indexFileName = fileName;
   indexFileName += '.';
-  indexFileName += indexNo+'0';
+  char number[25];
+  sprintf(number,"%d",indexNo);
+  indexFileName += number;
   PF_FileHandle file;
   TRY(pfmp->OpenFile(indexFileName.c_str(),file));
   indexHandle.file = file;

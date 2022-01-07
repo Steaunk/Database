@@ -9,7 +9,7 @@ FATAL: In-source builds are not allowed.
 endif()
 
 #ADD_DEFINITIONS("-pedantic -Wno-unused -Wall -Wextra -Werror -Wstrict-prototypes -Wmissing-prototypes -O2")
-ADD_DEFINITIONS("-Wall -g -DDEBUG")
+ADD_DEFINITIONS("-Wall -O2 -DDEBUG")
 # set(CTEST_TEST_TIMEOUT 1)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
