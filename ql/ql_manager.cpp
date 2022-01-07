@@ -131,7 +131,7 @@ RC QL_Manager::DeleteOrUpdate (const char *relName,            // relation to de
         }
         else {
             if(conditions[i].rhsValue.type != tableInfo.columnAttr[lID].attrType){
-                std::cout << "'" << tableInfo.columnAttr[lID].name << "' should be " << tableInfo.columnAttr[lID].attrType << "\n";
+                std::cout << "'" << tableInfo.columnAttr[lID].name << "' should be " << AttrTypeMsg[tableInfo.columnAttr[lID].attrType] << "\n";
                 return QL_DATA_NOT_MATCH;
             }
             if(!useIndex){
@@ -160,7 +160,7 @@ RC QL_Manager::DeleteOrUpdate (const char *relName,            // relation to de
             }
             updAttrOffset[i] = CntAttrOffset(&tableInfo, ID);
             if(rhsValue[i].type != tableInfo.columnAttr[ID].attrType){
-                std::cout << "'" << tableInfo.columnAttr[ID].name << "' should be " << tableInfo.columnAttr[lID].attrType << "\n";
+                std::cout << "'" << tableInfo.columnAttr[ID].name << "' should be " << AttrTypeMsg[tableInfo.columnAttr[lID].attrType] << "\n";
                 return QL_DATA_NOT_MATCH;
             }
             updAttrLength[i] = tableInfo.columnAttr[ID].attrLength;
