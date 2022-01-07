@@ -5,6 +5,7 @@
 #include "../rm/rm.h"
 #include "../ix/ix.h"
 #include "sm_internal.h"
+#include <string>
 
 // Used by SM_Manager::CreateTable
 struct AttrInfo {
@@ -70,9 +71,9 @@ class SM_Manager {
                     const char *value);
     RC GetTableInfo (const char *relName, TableInfo &tableInfo);
 
-    //std::string RelNameCat(const char *relNameA, const char *relNameB); //数据表名字拼接
-    //std::string AttrNameCat(const char *relName, const char *attrName); //数据表与字段名字拼接
-    //RC InnerJoin(const char *relNameA, const char *relNameB, int nConditions, const Condition conditions[]); //Inner Join
+    std::string RelNameCat(const char *relNameA, const char *relNameB); //数据表名字拼接
+    std::string AttrNameCat(const char *relName, const char *attrName); //数据表与字段名字拼接
+    RC InnerJoin(const char *relNameA, const char *relNameB); //Inner Join
 };
 
 void SM_PrintError(RC rc, std::string msg);
@@ -92,3 +93,5 @@ void SM_PrintError(RC rc, std::string msg);
 #define SM_CREATE_DB_FAIL (START_SM_ERR - 0) // fail to craete new database
 #define SM_DB_OPEN_ERR (START_SM_ERR - 1) // can't open database
 #define SM_DB_CLOSE_ERR (START_SM_ERR - 2) // can't close database
+#define SM_DB_DUPLICATE_INDEX (START_SM_ERR - 3) //duplicate index
+#define SM_DB_WRONG_INDEX (START_SM_ERR - 4) //create a index which is not in column
