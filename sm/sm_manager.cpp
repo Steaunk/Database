@@ -106,6 +106,10 @@ RC SM_Manager::CreateTable(const char *relName,
         strcpy(tableInfo.columnAttr[i].name, attributes[i].attrName);
     }
     tableInfo.size = recordSize;
+    tableInfo.indexNum = 0;
+    for(int i = 0; i < MAX_COLUMN_NUM; ++i){
+        tableInfo.index[i].columnID = -1;
+    }
     TRY(WriteData(relName, &tableInfo));
     rmm->CreateFile(RMName(relName).c_str(), recordSize);
     std::cout << "Table '" << relName << "' created\n";
@@ -201,12 +205,47 @@ RC SM_Manager::DropColumn   (const char *relName,
 RC SM_Manager::CreateIndex (const char *relName,                // Create index
                 const char *attrName){
     if(isOpenDb == false) return SM_DB_NOT_OPEN;
-    return OK_RC;
+    TableInfo table;
+    ReadData(relName, &table);
+    int columnID = -1;
+    for(int i = 0; i < MAX_COLUMN_NUM; ++i){
+        if(strcmp(attrName, table.index[i].name) == 0 && table.index[i].columnID != -1){
+            return SM_DB_DUPLICATE_INDEX;
+        }
+        if(strcmp(attrName,table.columnAttr[i].name) == 0){
+            columnID = i;
+        }
+    }
+    if(columnID == -1){
+        return SM_DB_WRONG_INDEX;
+    }
+    for(int i = 0; i < MAX_COLUMN_NUM; ++i){
+        if(table.index[i].columnID == -1){
+            ++table.indexNum;
+            ixm->CreateIndex(relName,i,table.columnAttr[columnID].attrType,table.columnAttr[columnID].attrLength);
+            table.index[i].columnID = columnID;
+            strcpy(table.index[i].name,attrName);
+            WriteData(relName,&table);
+            return OK_RC;
+        }
+    }
+    return SM_DB_INDEX_FULL;
                 }
 RC SM_Manager::DropIndex   (const char *relName,                // Destroy index
                 const char *attrName){
     if(isOpenDb == false) return SM_DB_NOT_OPEN;
-    return OK_RC;
+    TableInfo table;
+    ReadData(relName, &table);
+    for(int i = 0; i < MAX_COLUMN_NUM; ++i){
+        if(strcmp(attrName, table.index[i].name) == 0 && table.index[i].columnID != -1){
+            memset(table.index[i].name,0,sizeof(table.index[i].name));
+            table.index[i].columnID = -1;
+            ixm->DestroyIndex(relName,i);
+            WriteData(relName, &table);
+            return OK_RC;
+        }
+    }
+    return SM_DB_NO_INDEX;
                 }
 RC SM_Manager::Load        (const char *relName,                // Load utility
                 const char *fileName){
@@ -283,6 +322,7 @@ RC SM_Manager::InnerJoin(const char *relNameA, const char *relNameB){
         attrs[i+tableA.columnNum].attrLength = tableB.columnAttr[i].attrLength;
     }
     this->CreateTable(this->RelNameCat(relNameA,relNameB).c_str(),count,attrs);
+    delete[] attrs;
 }
 
 /*RC SM_Manager::CheckColumn(cnost char *relName, const char *relName_t, const char *attrName_t){
