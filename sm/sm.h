@@ -31,6 +31,7 @@ class SM_Manager {
     RM_Manager *rmm;
     bool isOpenDb;
     RC WriteData(const char *relName, TableInfo *data);
+    RC ShowIndexes   (const char *relName);
   public:
     std::string RMName(const char *relName);
        SM_Manager  (IX_Manager &ixm, RM_Manager &rmm);  // Constructor
@@ -60,6 +61,7 @@ class SM_Manager {
     RC Help        (const char *relName);               // Help for relation
     RC ShowDbs       ();              // Show Databases
     RC ShowTables   ();
+    RC ShowIndexes   ();
     RC DescTable   (const char *relName);
     RC Set         (const char *paramName,              // Set system parameter
                     const char *value);

@@ -217,8 +217,28 @@ class MyVisitor:public SQLBaseVisitor{
     }
     
     virtual antlrcpp::Any visitAlter_add_index(SQLParser::Alter_add_indexContext *ctx) override {
+        auto attrs = (ctx->identifiers()->Identifier());
+        std::string rel = ctx->Identifier()->getSymbol()->getText();
+        RC rc = sm->CreateIndex(rel.c_str(), (attrs[0]->getText()).c_str());
+        if(rc != OK_RC)SM_PrintError(rc, rel);
+        else {
+            cout << "Index added\n";
+        }
+        return visitChildren(ctx);
+    }
+    virtual antlrcpp::Any visitAlter_drop_index(SQLParser::Alter_drop_indexContext *ctx) override {
+        auto attrs = (ctx->identifiers()->Identifier());
+        std::string rel = ctx->Identifier()->getSymbol()->getText();
+        RC rc = sm->DropIndex(rel.c_str(), (attrs[0]->getText()).c_str());
+        if(rc != OK_RC)SM_PrintError(rc, rel);
+        else cout << "Index dropped\n";
         return visitChildren(ctx);
     }
 
+    virtual antlrcpp::Any visitShow_indexes(SQLParser::Show_indexesContext *ctx) override {
+        RC rc = sm->ShowIndexes();
+        if(rc != OK_RC)SM_PrintError(rc, NULL);
+        return visitChildren(ctx);
+    }
 
 };
