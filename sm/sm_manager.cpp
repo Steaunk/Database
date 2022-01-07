@@ -89,6 +89,51 @@ RC SM_Manager::ShowTables(){
     return OK_RC;
 }
 
+RC SM_Manager::ShowIndexes(){
+    if(isOpenDb == false) return SM_DB_NOT_OPEN;
+    std::string path = ".";
+    for (const auto &entry : fs::directory_iterator(path)) if(!entry.path().has_extension()){
+	    ShowIndexes(entry.path().filename().c_str());
+        std::cout << std::endl;
+	}
+    return OK_RC;
+
+}
+
+RC SM_Manager::ShowIndexes(const char *relName){
+    if(isOpenDb == false) return SM_DB_NOT_OPEN;
+    if(!fs::exists(relName)) return SM_TABLE_NOT_EXISTS;
+
+    TableInfo tableInfo;
+    ReadData(relName, &tableInfo);
+
+    std::cout << "### 数据表索引 " << relName << std::endl;
+
+    for(int i = 0; i < MAX_COLUMN_NUM; ++i){
+        int columnID = tableInfo.index[i].columnID;
+        if(columnID == -1)continue;
+        std::cout << tableInfo.columnAttr[columnID].name << " " << tableInfo.columnAttr[columnID].attrLength << " ";
+        switch (tableInfo.columnAttr[columnID].attrType)
+        {
+        case INT:
+            std::cout << "INT" << std::endl;
+            break;
+        case FLOAT:
+            std::cout << "FLOAT" << std::endl;
+            break;
+        case STRING:
+            std::cout << "CHAR(" << tableInfo.columnAttr[columnID].attrLength << ")" << std::endl;
+            break;
+        default:
+            break;
+        }
+    }
+
+    std::cout << "总计：" << tableInfo.indexNum << std::endl;
+    return OK_RC;
+
+}
+
 
 RC SM_Manager::CreateTable(const char *relName,
                            int        attrCount,
@@ -247,6 +292,7 @@ RC SM_Manager::DropIndex   (const char *relName,                // Destroy index
     ReadData(relName, &table);
     for(int i = 0; i < MAX_COLUMN_NUM; ++i){
         if(strcmp(attrName, table.index[i].name) == 0 && table.index[i].columnID != -1){
+            --table.indexNum;
             memset(table.index[i].name,0,sizeof(table.index[i].name));
             table.index[i].columnID = -1;
             ixm->DestroyIndex(relName,i);

@@ -32,6 +32,7 @@ class SM_Manager {
     RM_Manager *rmm;
     bool isOpenDb;
     RC WriteData(const char *relName, TableInfo *data);
+    RC ShowIndexes   (const char *relName);
   public:
     int CntAttrOffset(TableInfo *tableInfo, const int &id);
     std::string RMName(const char *relName);
@@ -67,6 +68,7 @@ class SM_Manager {
     RC Help        (const char *relName);               // Help for relation
     RC ShowDbs       ();              // Show Databases
     RC ShowTables   ();
+    RC ShowIndexes   ();
     RC DescTable   (const char *relName);
     RC Set         (const char *paramName,              // Set system parameter
                     const char *value);

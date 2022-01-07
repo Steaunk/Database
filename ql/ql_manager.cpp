@@ -293,6 +293,50 @@ RC QL_Manager::Update  (const char *relName,            // relation to update
     return OK_RC;
 }  
 
+RC QL_Manager::InsertIndex(const char *relName, const char *attrName){
+    int indexid = -1;
+    TableInfo table;
+    smm->ReadData(relName,&table);
+    for(int i = 0; i < MAX_COLUMN_NUM; ++i){
+        if(strcmp(attrName, table.index[i].name) == 0){
+            indexid = i;
+            break;
+        }
+    }
+    if(indexid == -1){
+        return QL_UNKNOW_INDEX;
+    }
+    int columnid = table.index[indexid].columnID;
+    IX_IndexHandle ixh;
+    (ixm->OpenIndex(relName,indexid,ixh));
+    RM_FileHandle rmh;
+    rmm->OpenFile(smm->RMName(relName).c_str(),rmh);
+    RM_FileScan rms;
+    rms.OpenScan(rmh,INT,0,0,NO_OP,nullptr);
+    RM_Record record;
+    int offset = CntAttrOffset(&table,columnid),
+    length = table.columnAttr[columnid].attrLength;
+    RC rc;
+    while((rc = rms.GetNextRec(record)) != RM_EOF){
+        if(rc!=0){
+            rms.CloseScan();
+            rmm->CloseFile(rmh);
+            ixm->CloseIndex(ixh);
+            smm->DropIndex(relName,attrName);
+            return rc;
+        }
+        char *data;
+        record.GetData(data);
+        RID rid;
+        record.GetRid(rid);
+        ixh.InsertEntry(data+offset,rid);
+    }
+    rms.CloseScan();
+    rmm->CloseFile(rmh);
+    ixm->CloseIndex(ixh);
+    return OK_RC;
+}
+
 int QL_Manager::CntAttrOffset(TableInfo *tableInfo, int id){
     int offset = 0;
     for(int i = 0; i < id; ++i){

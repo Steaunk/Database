@@ -80,8 +80,9 @@ class QL_Manager {
               const Value rhsValue[],          // value on RHS of =
               int   nConditions,              // # conditions in Where clause
               const Condition conditions[]);  // conditions in Where clause
-   RC AddIndex (const char *relName,            // relation to update
-              const char *attrName);        // attribute to update
+
+   RC InsertIndex(const char *relName, const char *attrName);
+   
  private:
   RC DeleteOrUpdate (const char *relName,            // relation to delete from
               int        nConditions,         // # conditions in Where clause
@@ -94,8 +95,9 @@ class QL_Manager {
 
 #define QL_DATA_NOT_MATCH (START_QL_WARN + 0) // haven't use any database
 #define QL_UNKNOW_COLUMN (START_QL_WARN + 1)
-#define QL_DUPLICATE_ENTRY (START_QL_WARN + 1)
-#define QL_NOT_UNIQUE_TABLE (START_QL_WARN + 1)
+#define QL_DUPLICATE_ENTRY (START_QL_WARN + 2)
+#define QL_NOT_UNIQUE_TABLE (START_QL_WARN + 3)
+#define QL_UNKNOW_INDEX (START_QL_WARN + 4)
 //#define RM_EOF (START_RM_WARN + 2)
 
 // QL ERR
