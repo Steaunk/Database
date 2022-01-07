@@ -14,6 +14,7 @@ set(SOURCE
 )
 
 add_library(sm ${HEADER} ${SOURCE})
+link_libraries(pf rm ix)
 set(CTEST_OUTPUT_ON_FAILURE True)
 add_executable(SM_TEST_1 sm_test1.cpp ${HEADER} ${SOURCE})
 add_executable(SM_TEST_2 sm_test2.cpp ${HEADER} ${SOURCE})

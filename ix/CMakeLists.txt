@@ -13,6 +13,8 @@ set(SOURCE
 
 set(CTEST_OUTPUT_ON_FAILURE True)
 
+link_libraries(pf)
+
 add_library(ix ${HEADER} ${SOURCE})
 
 add_executable(ix_test_1 test1.cpp ${HEADER} ${SOURCE})
