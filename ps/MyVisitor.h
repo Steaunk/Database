@@ -12,8 +12,12 @@ class MyVisitor:public SQLBaseVisitor{
     SM_Manager *sm;
     QL_Manager *qlm;
     int cnt = 0;
+    int cnt2 = 0;
+    int cnt3 = 0;
+    int cnt4 = 0;
     AttrInfo *attrInfo;
     Condition *conditions;
+    AttrInfo *attrInfo2;
     public:
     MyVisitor():sm(nullptr){}
     MyVisitor(SM_Manager &smm, QL_Manager &qlm):sm(&smm), qlm(&qlm){}
@@ -57,11 +61,28 @@ class MyVisitor:public SQLBaseVisitor{
             cout << f->getRuleIndex() << "?";
         }*/
         attrInfo = new AttrInfo[attrCount];
+        attrInfo2 = new AttrInfo[attrCount];
         //ctx->field_list()->
         cnt = 0;
+        cnt2 = 0;
+        cnt3 = 0;
         auto retval = visitChildren(ctx);
-        SM_PRINT(sm->CreateTable(s.c_str(), attrCount, attrInfo), s.c_str());
+        if(cnt2 > 1){
+            std::cout << "Multiple primary key defined\n";
+        }
+        else {
+            RC rc = sm->CreateTable(s.c_str(), cnt, attrInfo);
+            if(rc != OK_RC) SM_PrintError(rc, s.c_str());
+            else if(cnt2 == 1){
+                rc = sm->AddPrimaryKey(s.c_str(), cnt3, attrInfo2);
+                if(rc != OK_RC){
+                    sm->DropTable(s.c_str());
+                    SM_PrintError(rc, s.c_str());
+                }
+            }
+       }
         delete[] attrInfo;
+        delete[] attrInfo2;
         return retval;
     }
 
@@ -86,6 +107,12 @@ class MyVisitor:public SQLBaseVisitor{
     }
 
     virtual antlrcpp::Any visitPrimary_key_field(SQLParser::Primary_key_fieldContext *ctx) override {
+        for(auto i : ctx->identifiers()->Identifier()){
+            attrInfo2[cnt3].attrName = (char *)malloc(i->getText().length());
+            strcpy(attrInfo2[cnt3].attrName, i->getText().c_str());
+            cnt3++;
+        }
+        cnt2++;
         return visitChildren(ctx);
     }
 
@@ -135,15 +162,15 @@ class MyVisitor:public SQLBaseVisitor{
                 ++i;
             }
             RC rc = qlm->Insert(s.c_str(), i, value);
-            if(rc == OK_RC) ;
-            else if(rc == QL_DATA_NOT_MATCH){
+            if(rc == OK_RC);
+            else if(rc == QL_DATA_NOT_MATCH || rc == QL_DUPLICATE_ENTRY){
                 //std::cout << vl->getText() << " : type error\n";
                 cnt_f++;
             }
             else {
                 SM_PrintError(rc, s);
                 return visitChildren(ctx);
-            }
+            } 
             cnt_s++;
         }
         std::cout << "Query OK, " << cnt_s << " rows affected, " << cnt_f << " rows failed " << std::endl;
@@ -183,7 +210,78 @@ class MyVisitor:public SQLBaseVisitor{
         return retval;
     }
 
+    virtual antlrcpp::Any visitAlter_table_add_pk(SQLParser::Alter_table_add_pkContext *ctx) override {
+        std::string s = ctx->Identifier(0)->getSymbol()->getText();
+        std::string c = ctx->Identifier(1)->getSymbol()->getText();
+        int size = ctx->identifiers()->Identifier().size();
+        attrInfo = new AttrInfo[size];
+        int u = 0;
+        for(auto i : ctx->identifiers()->Identifier()){
+            attrInfo[u].attrName = (char *)malloc(i->getText().length());
+            cout << i->getText() << std::endl;
+            strcpy(attrInfo[u].attrName, i->getText().c_str());
+            u++;
+        }
+        RC rc = sm->AddPrimaryKey(s.c_str(), size, attrInfo);
+        if(rc != OK_RC){ SM_PrintError(rc, s); }
+        else std::cout << "Primary key added\n";
+        delete[] attrInfo;
+        return visitChildren(ctx);
+    }
+    virtual antlrcpp::Any visitAlter_table_drop_pk(SQLParser::Alter_table_drop_pkContext *ctx) override {
+        std::string s = ctx->Identifier(0)->getSymbol()->getText();
 
+        RC rc = sm->DropPrimaryKey(s.c_str());
+        if(rc == OK_RC) std::cout << "Primary key dropped\n";
+        else SM_PrintError(rc, s);
+
+        return visitChildren(ctx);
+    }
+
+    virtual antlrcpp::Any visitSelect_table(SQLParser::Select_tableContext *ctx) override {
+        int nSelAttrs = ctx->selectors()->selector().size();
+        int cntC = 0, cntA = 0;
+        for(auto sel : ctx->selectors()->selector()){
+            if(sel->column() != 0) cntC++;
+            else cntA++; 
+        }
+        int nRelations = ctx->identifiers()->Identifier().size();
+        char *relations[nRelations];
+        string relt[nRelations];
+        int i = 0;
+        for(auto rel : ctx->identifiers()->Identifier()){
+            relt[i] = rel->getText();
+            relations[i] = (char *)malloc(relt[i].length());
+            strcpy(relations[i], relt[i].c_str());
+            i++;
+        }
+        int size = ctx->where_and_clause()->where_clause().size();
+        conditions = new Condition[size];
+        RelAttr relAttr[cntC];
+        string strA[cntC];
+        string strB[cntC];
+                
+        if(cntC && cntA){
+            std::cout << "Error" << endl;
+        }
+        else{
+            if(cntC){
+                int i = 0;
+                for(auto sel : ctx->selectors()->selector()){
+                    strA[i] = sel->column()->Identifier(0)->getText();
+                    strB[i] = sel->column()->Identifier(1)->getText();
+                    relAttr[i].relName = (char *)malloc(strA[i].length());
+                    relAttr[i].attrName = (char *)malloc(strB[i].length());
+                    strcpy(relAttr[i].relName, strA[i].c_str());
+                    strcpy(relAttr[i].attrName, strB[i].c_str());
+                    i++;
+                }
+           }
+        }
+        auto retval = visitChildren(ctx);
+        SM_PRINT(qlm->Select(cntC, relAttr, nRelations, relations, size, conditions), "");
+        return retval;
+    }
 
     virtual antlrcpp::Any visitWhere_operator_expression(SQLParser::Where_operator_expressionContext *ctx) override {
         //cout << &(ctx->column()) << " ???? " << end;;
@@ -216,6 +314,7 @@ class MyVisitor:public SQLBaseVisitor{
         return visitChildren(ctx);
     }
     
+     
     virtual antlrcpp::Any visitAlter_add_index(SQLParser::Alter_add_indexContext *ctx) override {
         auto attrs = (ctx->identifiers()->Identifier());
         std::string rel = ctx->Identifier()->getSymbol()->getText();

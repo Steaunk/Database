@@ -76,8 +76,9 @@ RC RM_FileHandle::GetFreeSlot(const PF_PageHandle &pageHandle, SlotNum &slotNum,
 }
 
 RC RM_FileHandle::FindNextSlot(SlotNum &slotNum, PageNum pageNum, char *&data){
+    //very strange bug?
     static PF_PageHandle pageHandle;
-    debug("FindNextSlot : %d %d (%d %d) %d", 
+    debug("FindNextSlot : %d %d (%d %d) %d\n", 
         slotNum, pageNum, rmFileHeader.recordNumPerPage, 
         rmFileHeader.recordSize, rmFileHeader.pageNum);
     if(slotNum == 0){
@@ -86,6 +87,7 @@ RC RM_FileHandle::FindNextSlot(SlotNum &slotNum, PageNum pageNum, char *&data){
     RM_Slot slot;
     for(int i = slotNum; i < rmFileHeader.recordNumPerPage; ++i){
         TRY(GetSlot(pageHandle, i, slot));
+        //debug("(%d %d %d) ?\n", pageNum, i, slot);
         if(slot == true){
             slotNum = i;
             GetDataBySlotNum(pageHandle, slotNum, data);
@@ -165,6 +167,7 @@ RC RM_FileHandle::GetRec(const RID &rid, RM_Record &rec) const {
     SlotNum slotNum;
     TRY(rid.GetSlotNum(slotNum));
 
+    debug("GetRec Middle (pageNum = %d) %d\n", pageNum, rmFileHeader.pageNum);
     PF_PageHandle pageHandle;
     TRY(pfFileHandle.GetThisPage(pageNum, pageHandle));
 
@@ -260,7 +263,14 @@ RC RM_FileHandle::DeleteRec(const RID &rid){
         goto safe_exit;
     }
     
+    debug("DeleteRec [%d %d]\n", pageNum, slotNum);
     SAFE_TRY(SetSlot(pageHandle, slotNum, false))
+    
+    //-------- deleted
+        GetSlot(pageHandle, slotNum, slot);
+        debug("DeleteRec after SetSlot slot = %d\n", slot);
+
+
 
     if(pageHeader->recordNum == rmFileHeader.recordNumPerPage){
         pageHeader->nextFreePage = rmFileHeader.nextFreePage;
@@ -278,9 +288,47 @@ safe_exit:
 
 
 RC RM_FileHandle::ForcePages(PageNum pageNum){
-    if(pageNum == ALL_PAGES) ASSERT(false); //TO-DO
+    //if(pageNum == ALL_PAGES) ASSERT(false); //TO-DO
 
     TRY(pfFileHandle.ForcePages(pageNum));    
 
     return OK_RC;
+}
+
+bool RM_FileHandle::Comp(AttrType attrType, 
+                    int attrLength, 
+                    CompOp compOp,
+                    void *lvalue,
+                    void *rvalue){
+    bool flag;
+    switch (compOp)
+    {
+    case NO_OP: return true;
+
+    case EQ_OP:
+    case NE_OP:
+        if(attrType == INT) flag = (*((int *)lvalue) == *((int *)rvalue));
+        else if(attrType == FLOAT) flag = (*((float *)lvalue) == *((float *)rvalue));
+        else flag = strncmp((char *)lvalue, (char *)rvalue, attrLength) == 0; 
+        debug("COMP flag = %d (%d %d)\n", flag, *((int *)lvalue), *((int *)rvalue));
+        return compOp == NE_OP ? !flag : flag;
+
+    case LT_OP:
+    case GE_OP:
+        if(attrType == INT) flag = (*((int *)lvalue) < *((int *)rvalue));
+        else if(attrType == FLOAT) flag = (*((float *)lvalue) < *((float *)rvalue));
+        else flag = strncmp((char *)lvalue, (char *)rvalue, attrLength) < 0;
+        return compOp == GE_OP ? !flag : flag;
+
+    case GT_OP:
+    case LE_OP:
+        if(attrType == INT) flag = (*((int *)lvalue) > *((int *)rvalue));
+        else if(attrType == FLOAT) flag = (*((float *)lvalue) > *((float *)rvalue));
+        else flag = strncmp((char *)lvalue, (char *)rvalue, attrLength) > 0;
+        return compOp == LE_OP ? !flag : flag;
+
+    default:
+        break;
+    }
+    return false;
 }

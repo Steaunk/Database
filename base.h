@@ -83,6 +83,18 @@ enum CompOp {
 };
 
 //
+// Aggregator
+//
+enum Aggregator {
+    NONE,
+    COUNT,
+    AVERAGE,
+    MAX,
+    MIN,
+    SUM
+};
+
+//
 // Pin Strategy Hint
 //
 enum ClientHint {

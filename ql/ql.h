@@ -33,6 +33,29 @@ class QL_Manager {
   IX_Manager *ixm;
   RM_Manager *rmm;
   int CntAttrOffset(TableInfo *tableInfo, int id);
+  RC InsertAll(TableInfo &tableInfo, char *data);
+  RC DeleteAll(TableInfo &tableInfo, char *data, RID rid);
+  RC UpdateAll(TableInfo &tableInfo, char *new_data, char *old_data, RID rid);
+  RC CheckColumn(int           nSelAttrs,
+                 const RelAttr selAttrs[],
+                 int           nRelations,       // # relations in From clause
+                 const char * const relations[], // relations in From clause
+                 int           nConditions,      // # conditions in Where clause
+                 const Condition conditions[]);
+  RC SelectChecked(int nSelAttrs,
+                   const RelAttr selAttrs[],
+                   const char *relName,
+                   int nConditions,
+                   const Condition conditions[]);
+  
+  bool UseIndex(TableInfo &tableInfo, int nConditions, const Condition conditions[], int &indexNo, int &cid);
+  /*RC FindRelName(const char *attrName,
+                 int nRelations,
+                 const char * const relations[]);*/
+  RC GetConditionInfo(TableInfo &tableInfo, int nConditions, const Condition conditions[], 
+                      AttrType *attrType, int *attrLength, int *lAttrOffset, int *rAttrOffset);
+  void PrintData(TableInfo &tableInfo, int nSelAttrs, const RelAttr selAttrs[], char *data);
+  void PrintTable(TableInfo &tableInfo, int nSelAttrs, const RelAttr selAttrs[]);
  public:
                                               // Constructor
       QL_Manager (SM_Manager &smm, IX_Manager &ixm, RM_Manager &rmm);
@@ -42,7 +65,9 @@ class QL_Manager {
               int           nRelations,       // # relations in From clause
               const char * const relations[], // relations in From clause
               int           nConditions,      // # conditions in Where clause
-              const Condition conditions[]);  // conditions in Where clause
+              const Condition conditions[],
+              int limit = -1,
+              int offset = 0);  // conditions in Where clause
    RC Insert (const char  *relName,           // relation to insert into
               int         nValues,            // # values to insert
               const Value values[]);          // values to insert
@@ -65,11 +90,14 @@ class QL_Manager {
               int nUpdAttr,
               const RelAttr updAttr[],
               const Value rhsValue[]);
+  RC CheckPrimaryKey (const char *relName, char *data, int *offset = nullptr, RID rid = RID(-1, -1));
 };
 
 #define QL_DATA_NOT_MATCH (START_QL_WARN + 0) // haven't use any database
 #define QL_UNKNOW_COLUMN (START_QL_WARN + 1)
 #define QL_UNKNOW_INDEX (START_QL_WARN + 2)
+#define QL_DUPLICATE_ENTRY (START_QL_WARN + 3)
+#define QL_NOT_UNIQUE_TABLE (START_QL_WARN + 4)
 //#define RM_EOF (START_RM_WARN + 2)
 
 // QL ERR

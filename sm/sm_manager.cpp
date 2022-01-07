@@ -164,8 +164,15 @@ RC SM_Manager::CreateTable(const char *relName,
 RC SM_Manager::DropTable   (const char *relName){
     if(isOpenDb == false) return SM_DB_NOT_OPEN;
     if(!fs::exists(relName)) return SM_TABLE_NOT_EXISTS;
+
+    TableInfo tableInfo;
+    ReadData(relName, &tableInfo);
+    for(int i = 0; i < tableInfo.indexNum; ++i)
+        TRY(ixm->DestroyIndex(relName, i));
+
     fs::remove(relName);
-    rmm->DestroyFile(RMName(relName).c_str());
+    TRY(rmm->DestroyFile(RMName(relName).c_str()));
+
     std::cout << "Table '" << relName << "' dropped\n";
     return OK_RC;
 }               // Destroy relation
@@ -178,27 +185,29 @@ RC SM_Manager::DescTable(const char *relName){
     TableInfo tableInfo;
     ReadData(relName, &tableInfo);
 
-    std::cout << "### 数据表 " << relName << std::endl;
+    std::cout << "### 数据表 " << relName << "\n\n";
 
     for(int i = 0; i < tableInfo.columnNum; ++i){
-        std::cout << tableInfo.columnAttr[i].name << " " << tableInfo.columnAttr[i].attrLength << " ";
+        std::cout << tableInfo.columnAttr[i].name << " ";
         switch (tableInfo.columnAttr[i].attrType)
         {
         case INT:
-            std::cout << "INT" << std::endl;
+            std::cout << "INT ";
             break;
         case FLOAT:
-            std::cout << "FLOAT" << std::endl;
+            std::cout << "FLOAT ";
             break;
         case STRING:
-            std::cout << "CHAR(" << tableInfo.columnAttr[i].attrLength << ")" << std::endl;
+            std::cout << "CHAR(" << tableInfo.columnAttr[i].attrLength << ") ";
             break;
         default:
             break;
         }
+        if(tableInfo.columnAttr[i].isPrimaryKey) std::cout << "PRI ";
+        std::cout << std::endl;
     }
 
-    std::cout << "总计：" << tableInfo.columnNum << std::endl;
+    std::cout << "\n总计：" << tableInfo.columnNum << std::endl;
     return OK_RC;
 
 }
@@ -329,11 +338,129 @@ RC SM_Manager::ReadData(const char *relName, TableInfo *data){
     return OK_RC;
 }
 
+RC SM_Manager::AddPrimaryKey(const char *relName, int keyNum, const AttrInfo *attributes){
+    if(isOpenDb == false) return SM_DB_NOT_OPEN;
+    if(!fs::exists(relName)) return SM_TABLE_NOT_EXISTS;
+   
+    TableInfo tableInfo;
+    TRY(ReadData(relName, &tableInfo));
+    if(tableInfo.primaryKey.keyNum > 0) return SM_DUPLICATE_KEY;
+    tableInfo.primaryKey.keyNum = keyNum;
+    for(int i = 0; i < keyNum; ++i){
+        RC rc = GetColumnIDByName(attributes[i].attrName, &tableInfo, tableInfo.primaryKey.columnID[i]);
+        if(rc != OK_RC){
+            if(rc == SM_UNKNOW_COLUMN){
+                std::cout << "Unknown column '" << attributes[i].attrName << "'\n";
+            }
+            return rc;
+        }
+    }
+
+    int pkOffset[keyNum];
+    //----- check duplicate --- 
+    for(int i = 0; i < keyNum; ++i){
+        if(tableInfo.columnAttr[tableInfo.primaryKey.columnID[i]].isPrimaryKey == true)
+            return SM_DUPLICATE_KEY;
+        tableInfo.columnAttr[tableInfo.primaryKey.columnID[i]].isPrimaryKey = true;
+        pkOffset[i] = CntAttrOffset(&tableInfo, tableInfo.primaryKey.columnID[i]);
+    }
+    //----- check end ---
+
+    int first_key_id = tableInfo.primaryKey.columnID[0];
+    auto &first_key = tableInfo.columnAttr[first_key_id];
+    ixm->CreateIndex(relName, -1, first_key.attrType, first_key.attrLength);
+    IX_IndexHandle ixih;
+    ixm->OpenIndex(relName, -1, ixih);
+    RM_FileHandle rmfh;
+    rmm->OpenFile(RMName(relName).c_str(), rmfh);
+    RM_FileScan rmfs;
+    rmfs.OpenScan(rmfh, AttrType(0), 0, 0, NO_OP, nullptr);
+    RC rc;
+    RM_Record rec;
+    bool flag = true;
+    while((rc = rmfs.GetNextRec(rec)) != RM_EOF){
+        flag = false;
+        if(rc != OK_RC) break;    
+        IX_IndexScan ixis;
+        char *data;
+        RID rid;
+        rec.GetData(data);
+        //debug("AddPrimaryKey data = %d\n", *((int *)(data + 4)));
+        ixis.OpenScan(ixih, EQ_OP, data + pkOffset[0]);  
+        RM_Record trec;
+        char *tdata;
+
+        flag = true;
+        while((rc = ixis.GetNextEntry(rid)) != IX_EOF){
+            rc = rmfh.GetRec(rid, trec);
+            if(rc != OK_RC) break;
+
+            bool fflag = false;
+            trec.GetData(tdata);
+            for(int i = 1; i < keyNum; ++i){
+                auto &t = tableInfo.columnAttr[tableInfo.primaryKey.columnID[i]];
+                if(RM_FileHandle::Comp(t.attrType, t.attrLength, EQ_OP, data + pkOffset[i], tdata + pkOffset[i]) == false){
+                    fflag = true;
+                    break;
+                }
+            }
+            if(fflag == false){
+                flag = false;
+                break;
+            }
+        }
+        if(rc == IX_EOF) flag = true;
+        if(flag == false) break;
+        rec.GetRid(rid);
+        ixih.InsertEntry(data + pkOffset[0], rid);
+    }
+    debug("AddPrimaryKey flag = %d\n", flag);
+    if(flag == false){
+        ixm->CloseIndex(ixih);
+        ixm->DestroyIndex(relName, -1);
+        debug("AddPrimaryKey FAIL !!!\n");
+        if(rc == OK_RC){
+            rc = SM_DUPLICATE_ENTRY;
+            return rc;
+        }
+    }
+
+    ixm->CloseIndex(ixih);
+    WriteData(relName, &tableInfo);
+
+    return OK_RC;
+}
+
+RC SM_Manager::DropPrimaryKey(const char *relName){
+    if(isOpenDb == false) return SM_DB_NOT_OPEN;
+    if(!fs::exists(relName)) return SM_TABLE_NOT_EXISTS;
+
+    TableInfo tableInfo;
+    ReadData(relName, &tableInfo);
+    if(tableInfo.primaryKey.keyNum == 0) return OK_RC;
+    for(int i = 0; i < tableInfo.primaryKey.keyNum; ++i){
+        tableInfo.columnAttr[tableInfo.primaryKey.columnID[i]].isPrimaryKey = false;        
+    }
+    tableInfo.primaryKey.keyNum = 0;
+    debug("DropPrimaryKey %s\n", relName);
+    ixm->DestroyIndex(relName, -1);
+    WriteData(relName, &tableInfo);
+    return OK_RC;
+}
+
 RC SM_Manager::GetTableInfo(const char *relName, TableInfo &tableInfo){
     if(isOpenDb == false) return SM_DB_NOT_OPEN;
     if(!fs::exists(relName)) return SM_TABLE_NOT_EXISTS;
     ReadData(relName, &tableInfo);
     return OK_RC;
+}
+
+int SM_Manager::CntAttrOffset(TableInfo *tableInfo, const int &id){
+    int offset = 0;
+    for(int i = 0; i < id; ++i){
+        offset += tableInfo->columnAttr[i].attrLength;
+    }
+    return offset;
 }
 
 std::string SM_Manager::RMName(const char *relName){
@@ -351,6 +478,7 @@ std::string SM_Manager::AttrNameCat(const char *relName, const char *attrName){
     if(s.find(".") != -1)return attrName;
     return relName + ("." + s);
 } //数据表与字段名字拼接
+
 RC SM_Manager::InnerJoin(const char *relNameA, const char *relNameB){
     TableInfo tableA,tableB;
     ReadData(relNameA,&tableA);

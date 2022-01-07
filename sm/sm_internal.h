@@ -11,13 +11,14 @@
 struct ForeignKey {
     char name[MAX_NAME_LENGTH];
     int keyNum = 0; //联合主键
-    char father[MAX_NAME_LENGTH];
-    int fatherColumn[MAX_COLUMN_NUM];
-    char son[MAX_NAME_LENGTH];
-    int sonColumn[MAX_COLUMN_NUM];
+    //char father[MAX_NAME_LENGTH]; //
+    int myColumn[MAX_COLUMN_NUM];
+    char foreign[MAX_NAME_LENGTH];
+    int foreignColumn[MAX_COLUMN_NUM];
 };
 
 struct PrimaryKey {
+    char name[MAX_NAME_LENGTH];
     int keyNum = 0;
     int columnID[MAX_COLUMN_NUM];
     int referenceNum;

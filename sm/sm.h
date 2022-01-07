@@ -4,6 +4,7 @@
 #include "../base.h"
 #include "../rm/rm.h"
 #include "../ix/ix.h"
+#include "../pf/pf.h"
 #include "sm_internal.h"
 #include <string>
 
@@ -33,6 +34,7 @@ class SM_Manager {
     RC WriteData(const char *relName, TableInfo *data);
     RC ShowIndexes   (const char *relName);
   public:
+    int CntAttrOffset(TableInfo *tableInfo, const int &id);
     std::string RMName(const char *relName);
        SM_Manager  (IX_Manager &ixm, RM_Manager &rmm);  // Constructor
        ~SM_Manager ();                                  // Destructor
@@ -55,6 +57,11 @@ class SM_Manager {
                     const char *attrName);
     RC DropIndex   (const char *relName,                // Destroy index
                     const char *attrName);
+    RC AddPrimaryKey (const char *relName,
+                      int keyNum,
+                      const AttrInfo *attributes);
+
+    RC DropPrimaryKey (const char *relName);
     RC Load        (const char *relName,                // Load utility
                     const char *fileName);
     RC Help        ();                                  // Help for database
@@ -81,6 +88,8 @@ void SM_PrintError(RC rc, std::string msg);
 #define SM_TABLE_EXISTS (START_SM_WARN + 3)
 #define SM_TABLE_NOT_EXISTS (START_SM_WARN + 4)
 #define SM_UNKNOW_COLUMN (START_SM_WARN + 5)
+#define SM_DUPLICATE_KEY (START_SM_WARN + 6)
+#define SM_DUPLICATE_ENTRY (START_SM_WARN + 7)
 //#define RM_EOF (START_RM_WARN + 2)
 
 // SM ERR
