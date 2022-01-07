@@ -386,6 +386,7 @@ std::string SM_Manager::AttrNameCat(const char *relName, const char *attrName){
     if(s.find(".") != -1)return attrName;
     return relName + ("." + s);
 } //数据表与字段名字拼接
+
 RC SM_Manager::InnerJoin(const char *relNameA, const char *relNameB){
     TableInfo tableA,tableB;
     ReadData(relNameA,&tableA);
