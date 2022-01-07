@@ -284,7 +284,6 @@ RC SM_Manager::AddPrimaryKey(const char *relName, int keyNum, const AttrInfo *at
     int first_key_id = tableInfo.primaryKey.columnID[0];
     auto &first_key = tableInfo.columnAttr[first_key_id];
     ixm->CreateIndex(relName, -1, first_key.attrType, first_key.attrLength);
-    ixm->CreateIndex(relName, 0, first_key.attrType, first_key.attrLength);
     IX_IndexHandle ixih;
     ixm->OpenIndex(relName, -1, ixih);
     RM_FileHandle rmfh;
@@ -329,6 +328,7 @@ RC SM_Manager::AddPrimaryKey(const char *relName, int keyNum, const AttrInfo *at
     if(flag == false){
         ixm->CloseIndex(ixih);
         ixm->DestroyIndex(relName, -1);
+        debug("AddPrimaryKey FAIL !!!\n");
         if(rc == OK_RC){
             rc = SM_DUPLICATE_ENTRY;
             return rc;
@@ -351,7 +351,9 @@ RC SM_Manager::DropPrimaryKey(const char *relName){
     for(int i = 0; i < tableInfo.primaryKey.keyNum; ++i){
         tableInfo.columnAttr[tableInfo.primaryKey.columnID[i]].isPrimaryKey = false;        
     }
-    
+    tableInfo.primaryKey.keyNum = 0;
+    debug("DropPrimaryKey %s\n", relName);
+    ixm->DestroyIndex(relName, -1);
     WriteData(relName, &tableInfo);
     return OK_RC;
 }

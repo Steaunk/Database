@@ -218,13 +218,27 @@ class MyVisitor:public SQLBaseVisitor{
         int u = 0;
         for(auto i : ctx->identifiers()->Identifier()){
             attrInfo[u].attrName = (char *)malloc(i->getText().length());
+            cout << i->getText() << std::endl;
             strcpy(attrInfo[u].attrName, i->getText().c_str());
+            u++;
         }
         RC rc = sm->AddPrimaryKey(s.c_str(), size, attrInfo);
         if(rc != OK_RC){ SM_PrintError(rc, s); }
         else std::cout << "Primary key added\n";
+        delete[] attrInfo;
         return visitChildren(ctx);
     }
+    virtual antlrcpp::Any visitAlter_table_drop_pk(SQLParser::Alter_table_drop_pkContext *ctx) override {
+        std::string s = ctx->Identifier(0)->getSymbol()->getText();
+
+        RC rc = sm->DropPrimaryKey(s.c_str());
+        if(rc == OK_RC) std::cout << "Primary key dropped\n";
+        else SM_PrintError(rc, s);
+
+        return visitChildren(ctx);
+    }
+
+
 
     virtual antlrcpp::Any visitWhere_operator_expression(SQLParser::Where_operator_expressionContext *ctx) override {
         //cout << &(ctx->column()) << " ???? " << end;;
