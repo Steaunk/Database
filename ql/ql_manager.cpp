@@ -4,18 +4,242 @@
 #include "../ix/ix.h"
 #include <cstring>
 
+
+ostream &operator<<(ostream &s, const RelAttr &ra){
+    s << ra.relName << "." << ra.attrName;
+    return s;
+}
+
 QL_Manager::QL_Manager(SM_Manager &smm, IX_Manager &ixm, RM_Manager &rmm):smm(&smm), ixm(&ixm), rmm(&rmm){}
 
 QL_Manager::~QL_Manager(){}
+
+void QL_Manager::PrintTable(TableInfo &tableInfo, int nSelAttrs, const RelAttr selAttrs[]){
+    if(nSelAttrs == 0){
+        for(int i = 0; i < tableInfo.columnNum; ++i)
+            std::cout << "\t" << tableInfo.name << "." << tableInfo.columnAttr[i].name;
+    }
+    else {
+        for(int i = 0; i < nSelAttrs; ++i)
+            std::cout << "\t" << selAttrs[i];
+    }
+    std::cout << std::endl; 
+}
+
+void QL_Manager::PrintData(TableInfo &tableInfo, int nSelAttrs, const RelAttr selAttrs[], char *data){
+
+    if(nSelAttrs == 0){
+        for(int i = 0; i < tableInfo.columnNum; ++i){
+            std::cout << "\t";
+            switch (tableInfo.columnAttr[i].attrType)
+            {
+            case INT:
+                std::cout << *((int*)data);
+                break;
+            case FLOAT:
+                std::cout << *((float*)data);
+                break;
+            case STRING:
+                std::cout << *((char*)data);
+                break;
+
+            default:
+                assert(false);
+                break;
+            }
+            data += tableInfo.columnAttr[i].attrLength;
+        }
+    }
+    else {
+        for(int i = 0; i < nSelAttrs; ++i){
+            std::cout << "\t";
+            int ID;
+            smm->GetColumnIDByName(selAttrs[i].attrName, &tableInfo, ID);
+            int offset = CntAttrOffset(&tableInfo, ID);
+            switch (tableInfo.columnAttr[ID].attrType)
+            {
+            case INT:
+                std::cout << *((int*)(data+offset));
+                break;
+            case FLOAT:
+                std::cout << *((float*)(data+offset));
+                break;
+            case STRING:
+                std::cout << *((char*)(data+offset));
+                break;
+
+            default:
+                assert(false);
+                break;
+            }
+        }
+    }
+    std::cout << std::endl; 
+}
+
+bool QL_Manager::UseIndex(TableInfo &tableInfo, int nConditions, const Condition conditions[], int &indexNo, int &cid){
+    if(tableInfo.primaryKey.keyNum > 0){
+        indexNo = -1;
+        return true;
+    }
+    for(int i = 0; i < nConditions; ++i){
+        if(conditions[i].bRhsIsAttr == false){
+            int ID;
+            if(smm->GetColumnIDByName(conditions[i].lhsAttr.attrName, &tableInfo, ID) != OK_RC) assert(false); //Only use after check columns
+            for(int j = 0; j < tableInfo.indexNum; ++j) if(tableInfo.index[i].columnID == ID){
+                indexNo = i;
+                cid = i;
+                return true; 
+            }
+        }
+    }
+    return false;
+}
+
+RC QL_Manager::GetConditionInfo(TableInfo &tableInfo, int nConditions, const Condition conditions[], 
+                    AttrType *attrType, int *attrLength, int *lAttrOffset, int *rAttrOffset){
+    for(int i = 0; i < nConditions; ++i){
+        int ID;
+        smm->GetColumnIDByName(conditions[i].lhsAttr.attrName, &tableInfo, ID);
+        attrType[i] = tableInfo.columnAttr[ID].attrType;
+        attrLength[i] = tableInfo.columnAttr[ID].attrLength;
+        lAttrOffset[i] = CntAttrOffset(&tableInfo, ID);
+        if(conditions[i].bRhsIsAttr){
+            smm->GetColumnIDByName(conditions[i].rhsAttr.attrName, &tableInfo, ID);
+            rAttrOffset[i] = CntAttrOffset(&tableInfo, ID);
+        }
+    }
+    return OK_RC;
+}
+ 
+
+RC QL_Manager::SelectChecked(int nSelAttrs,
+                   const RelAttr selAttrs[],
+                   const char *relName,
+                   int nConditions,
+                   const Condition conditions[]){
+    RC rc = OK_RC;
+
+    TableInfo tableInfo;
+    TRY(smm->GetTableInfo(relName, tableInfo));
+
+    int indexNo, cid;
+    bool useIndex = UseIndex(tableInfo, nConditions, conditions, indexNo, cid);
+
+    debug(useIndex ? "Index Speed Up\n" : "Nothing happened\n");
+
+    RM_FileHandle rmfh;
+    AttrType attrType[nConditions];
+    int attrLength[nConditions];
+    int lAttrOffset[nConditions];
+    int rAttrOffset[nConditions];
+    GetConditionInfo(tableInfo, nConditions, conditions, attrType, attrLength, lAttrOffset, rAttrOffset);
+
+    TRY(rmm->OpenFile(smm->RMName(relName).c_str(), rmfh));
+
+    int cnt = 0;
+
+    PrintTable(tableInfo, nSelAttrs, selAttrs);
+
+    auto func = [&](char *data, bool &flag){
+        for(int i = 0; i < nConditions; ++i){
+            auto &c = conditions[i];
+            if(!RM_FileHandle::Comp(attrType[i], attrLength[i], c.op, 
+                                    (void *)(data + lAttrOffset[i]),
+                                    (void *)(c.bRhsIsAttr ? (data + rAttrOffset[i]) : c.rhsValue.data))){
+                flag = false;
+                break;
+            } 
+        }
+        
+    };
+
+    if(useIndex == false){
+        RM_FileScan rmfs;
+        rmfs.OpenScan(rmfh, AttrType(0), 0, 0, NO_OP, nullptr);
+        RM_Record rec;
+        while((rc = rmfs.GetNextRec(rec)) != RM_EOF){
+            if(rc != OK_RC) goto safe_exit;
+            char *data;
+            rec.GetData(data);
+            bool flag = true;
+            func(data, flag);
+            if(flag == true){
+                PrintData(tableInfo, nSelAttrs, selAttrs, data);
+                cnt++;
+            }
+        }
+        rmfs.CloseScan();
+    }
+    else{
+        IX_IndexHandle ixih;
+        ixm->OpenIndex(relName, indexNo, ixih);
+        IX_IndexScan ixis;
+        ixis.OpenScan(ixih, conditions[cid].op, conditions[cid].rhsValue.data);//rmfh, AttrType(0), 0, 0, NO_OP, nullptr);
+        RM_Record rec;
+        RID rid;
+        while((rc = ixis.GetNextEntry(rid)) != IX_EOF){
+            debug("RC middle rc = %d\n", rc);
+            if(rc != OK_RC) goto safe_exit;
+            debug("RC middle rc = %d\n", rc);
+            rmfh.GetRec(rid, rec);
+            char *data;
+            rec.GetData(data);
+            bool flag = true;
+            func(data, flag);
+            if(flag == true){
+                PrintData(tableInfo, nSelAttrs, selAttrs, data);
+                cnt++;
+            }
+        }
+        //ixis.CloseScan();
+        debug("RC next rc = %d\n", rc);
+    }
+    std::cout << "\nQuery OK, " << cnt << " rows in set\n";
+
+safe_exit:
+    if(rc == IX_EOF) rc = OK_RC;
+    TRY(rmm->CloseFile(rmfh));
+    debug("RC rc = %d\n", rc);
+    return rc; 
+}
 
 RC QL_Manager::Select  (int           nSelAttrs,        // # attrs in Select clause
             const RelAttr selAttrs[],       // attrs in Select clause
             int           nRelations,       // # relations in From clause
             const char * const relations[], // relations in From clause
             int           nConditions,      // # conditions in Where clause
-            const Condition conditions[]){
+            const Condition conditions[],
+            int limit,
+            int offset){
+
+    debug("CheckColumn Pass!\n");
+    
+    for(int i = 0; i < nSelAttrs; ++i){
+        debug("%s.%s\n", selAttrs[i].relName, selAttrs[i].attrName);
+    }
+    for(int i = 0; i < nRelations; ++i){
+        debug("%s\n", relations[i]);
+    }
+    for(int i = 0; i < nConditions; ++i){
+        debug("[%s]\n", conditions[i].lhsAttr.attrName);
+    }
+
+
+    TRY(CheckColumn(nSelAttrs, selAttrs, nRelations, relations, nConditions, conditions));
+
+    if(nRelations == 1){
+        TRY(SelectChecked(nSelAttrs, selAttrs, relations[0], nConditions, conditions));
+        //TableInfo tableInfo;
+    }
+        //TRY(smm->GetTableInfo())
+        //bool useIndex = false;
+
+    debug("Select END\n");
+
     return OK_RC;
-            }  // conditions in Where clause
+}  // conditions in Where clause
+
 RC QL_Manager::Insert  (const char  *relName,           // relation to insert into
             int         nValues,            // # values to insert
             const Value values[]){
@@ -77,6 +301,100 @@ int QL_Manager::CntAttrOffset(TableInfo *tableInfo, int id){
     return offset;
 }
 
+
+RC QL_Manager::CheckColumn(int  nSelAttrs,
+                 const RelAttr selAttrs[],
+                 int           nRelations,       // # relations in From clause
+                 const char * const relations[], // relations in From clause
+                 int           nConditions,      // # conditions in Where clause
+                 const Condition conditions[]){
+    
+    for(int i = 0; i < nRelations; ++i){
+        for(int j = i + 1; j < nRelations; ++j){
+            if(strcmp(relations[i], relations[j]) == 0){
+                std::cout << "Not unique table\n";
+                return QL_NOT_UNIQUE_TABLE;
+            }
+        }
+    }
+    debug("CheckColumn Middle\n");
+    RC rc = OK_RC;
+    TableInfo *tableInfo = new TableInfo[nRelations];
+    for(int i = 0; i < nRelations; ++i){
+        debug("CheckColumn relations[%d] = %s\n", i, relations[i]);
+        SAFE_TRY(smm->GetTableInfo(relations[i], tableInfo[i]));
+    }
+
+    for(int i = 0; i < nSelAttrs; ++i){
+        bool flag = false;
+        int ID;
+        for(int j = 0; j < nRelations; ++j){
+            if(strcmp(selAttrs[i].relName, relations[j]) == 0 && 
+                (smm->GetColumnIDByName(selAttrs[i].attrName, &tableInfo[j], ID) == OK_RC)
+            ){
+                //debug("1st for [i = %d, j = %d; ID = %d]\n", i, j, ID);
+                flag = true;
+                break;
+           }
+        }
+        if(flag == false){
+            std::cout << "Unknown column '" << selAttrs[i].relName << "." << 
+                selAttrs[i].attrName << "' in selectors\n";
+            return QL_UNKNOW_COLUMN;
+        }
+    }
+    debug("CheckColumn Where\n");
+
+    for(int i = 0; i < nConditions; ++i){
+        bool flag = false;
+        int lID, rID, j = 0;
+
+        for(; j < nRelations; ++j){
+            if(strcmp(conditions[i].lhsAttr.relName, relations[j]) == 0 && 
+                (smm->GetColumnIDByName(conditions[i].lhsAttr.attrName, &tableInfo[j], lID) == OK_RC)
+            ){
+                flag = true;
+                break;
+           }
+        }
+        if(flag == false){
+            std::cout << "Unknown column '" << conditions[i].lhsAttr.relName << "." << 
+                conditions[i].lhsAttr.attrName << "' in where clause\n";
+            return QL_UNKNOW_COLUMN;
+        }
+
+        flag = true;
+        if(conditions[i].bRhsIsAttr == true){
+            int k = 0;
+            for(; k < nRelations; ++k){
+                if(strcmp(conditions[i].rhsAttr.relName, relations[k]) == 0 && 
+                    (smm->GetColumnIDByName(conditions[i].rhsAttr.attrName, &tableInfo[k], rID) == OK_RC)
+                ){
+                    flag = true;
+                    break;
+                }
+            }
+            if(flag == false){
+                std::cout << "Unknown column '" << conditions[i].lhsAttr.relName << "." << 
+                    conditions[i].lhsAttr.attrName << "' in where clause\n";
+                return QL_UNKNOW_COLUMN;
+            }
+            else if(tableInfo[j].columnAttr[lID].attrType != tableInfo[k].columnAttr[rID].attrType){
+                std::cout << "Values don't have same type\n";
+                return QL_DATA_NOT_MATCH;
+            }
+        }
+        else if(conditions[i].rhsValue.type != tableInfo[j].columnAttr[lID].attrType){
+                std::cout << "'" << tableInfo[j].columnAttr[lID].name << "' should be " << AttrTypeMsg[tableInfo[j].columnAttr[lID].attrType] << "\n";
+                return QL_DATA_NOT_MATCH;
+        }
+    }
+
+safe_exit:
+    delete[] tableInfo;
+    return rc;
+}
+
 RC QL_Manager::DeleteOrUpdate (const char *relName,            // relation to delete from
             int        nConditions,         // # conditions in Where clause
             const Condition conditions[],
@@ -112,7 +430,7 @@ RC QL_Manager::DeleteOrUpdate (const char *relName,            // relation to de
             (rc = smm->GetColumnIDByName(conditions[i].lhsAttr.attrName, &tableInfo, lID))
         ){
             std::cout << "Unknown column '" << conditions[i].lhsAttr.relName << "." << 
-                conditions[i].lhsAttr.attrName << "' in 'where clause\n";
+                conditions[i].lhsAttr.attrName << "' in where clause\n";
             return QL_UNKNOW_COLUMN;
         }
         else if(conditions[i].bRhsIsAttr){
@@ -120,7 +438,7 @@ RC QL_Manager::DeleteOrUpdate (const char *relName,            // relation to de
              (rc = smm->GetColumnIDByName(conditions[i].rhsAttr.attrName, &tableInfo, rID))
             ) {
                 std::cout << "Unknown column '" << conditions[i].rhsAttr.relName << "." << 
-                    conditions[i].rhsAttr.attrName << "' in 'where clause\n";
+                    conditions[i].rhsAttr.attrName << "' in where clause\n";
                 return QL_UNKNOW_COLUMN;
             }
             if(tableInfo.columnAttr[lID].attrType != tableInfo.columnAttr[rID].attrType){
@@ -155,7 +473,7 @@ RC QL_Manager::DeleteOrUpdate (const char *relName,            // relation to de
         int ID;
         for(int i = 0; i < nUpdAttr; ++i){
             if((rc = smm->GetColumnIDByName(updAttr[i].attrName, &tableInfo, ID))){
-                 std::cout << "Unknown column '" << updAttr[i].attrName << "' in 'where clause\n";
+                 std::cout << "Unknown column '" << updAttr[i].attrName << "' in where clause\n";
                 return QL_UNKNOW_COLUMN;
             }
             updAttrOffset[i] = CntAttrOffset(&tableInfo, ID);
@@ -180,6 +498,7 @@ RC QL_Manager::DeleteOrUpdate (const char *relName,            // relation to de
     int cnt = 0;
     printf("<%d>\n", RM_EOF);
     char *data;
+    int cnt_f = 0;
     while((rc = rmfs.GetNextRec(rec)) != RM_EOF){
         if(rc != OK_RC){
             std::cout << "RM : " << rc << endl;
@@ -188,7 +507,7 @@ RC QL_Manager::DeleteOrUpdate (const char *relName,            // relation to de
         bool flag = true;
         
         rec.GetData(data);
-        std::cout << "(" << *((int *)data) << ")" << std::endl;
+        //std::cout << "(" << *((int *)data) << ")" << std::endl;
         for(int i = 0; i < nConditions; ++i){
             auto &c = conditions[i];
             if(!RM_FileHandle::Comp(attrType[i], attrLength[i], c.op, 
@@ -207,16 +526,23 @@ RC QL_Manager::DeleteOrUpdate (const char *relName,            // relation to de
                 SlotNum slotNum;
                 rid.GetPageNum(pageNum);
                 rid.GetSlotNum(slotNum);
-                debug("Delete [%d %d]\n", pageNum, slotNum);
-                rmfh.DeleteRec(rid);
-                RC rc = rmfh.DeleteRec(rid);
+
+                //debug("Delete [%d %d]\n", pageNum, slotNum);
+                //rmfh.DeleteRec(rid);
+
+                RC rc = DeleteAll(tableInfo, data, rid);//rmfh.DeleteRec(rid);
                 debug("Delete rc = %d\n", rc);
             }
             else {
+                char *new_data = (char *) malloc(tableInfo.size);
+                memcpy(new_data, data, tableInfo.size);
                 for(int i = 0; i < nUpdAttr; ++i){
-                    memcpy(data + updAttrOffset[i], rhsValue[i].data, updAttrLength[i]);
+                    memcpy(new_data + updAttrOffset[i], rhsValue[i].data, updAttrLength[i]);
                 }
-                rmfh.UpdateRec(rec);
+                RC rc = CheckPrimaryKey(relName, data, nullptr, rid);
+                if(rc != OK_RC) cnt_f++;
+                else UpdateAll(tableInfo, new_data, data, rid);
+                free(new_data);
             }
             cnt++;
         }
@@ -227,7 +553,7 @@ RC QL_Manager::DeleteOrUpdate (const char *relName,            // relation to de
     return OK_RC;
 }
 
-RC QL_Manager::CheckPrimaryKey(const char *relName, char *data, int *offset){
+RC QL_Manager::CheckPrimaryKey(const char *relName, char *data, int *offset, RID Rid){
     TableInfo tableInfo;
     TRY(smm->GetTableInfo(relName, tableInfo));
 
@@ -237,7 +563,7 @@ RC QL_Manager::CheckPrimaryKey(const char *relName, char *data, int *offset){
     if(offset == nullptr){
         offset = new int[tableInfo.primaryKey.keyNum];
         for(int i = 0; i  < tableInfo.primaryKey.keyNum; ++i)
-            CntAttrOffset(&tableInfo, offset[i]);
+            offset[i] = CntAttrOffset(&tableInfo, tableInfo.primaryKey.columnID[i]);
         remember2delete = true;
     }
 
@@ -254,9 +580,14 @@ RC QL_Manager::CheckPrimaryKey(const char *relName, char *data, int *offset){
     RC rc;
     debug("WHST?\n");
     while((rc = ixis.GetNextEntry(rid)) != IX_EOF){
-        debug("HERE");
+        PageNum pageNum;
+        SlotNum slotNum;
+        rid.GetPageNum(pageNum);
+        rid.GetSlotNum(slotNum);
+        debug("HERE %d %d\n", pageNum, slotNum);
         rc = rmfh.GetRec(rid, trec);
         if(rc != OK_RC) break;
+        if(rid == Rid) continue;
         bool flag = false;
         trec.GetData(tdata);
         for(int i = 1; i < tableInfo.primaryKey.keyNum; ++i){
@@ -278,18 +609,20 @@ RC QL_Manager::CheckPrimaryKey(const char *relName, char *data, int *offset){
     ixm->CloseIndex(ixih);
     rmm->CloseFile(rmfh);
     if(remember2delete) delete offset;
+    debug("CheckPrimaryKey rc = %d\n", rc);
     return rc;
 
 }
 
 RC QL_Manager::InsertAll(TableInfo &tableInfo, char *data){
     RM_FileHandle rmfh;
-    rmm->OpenFile(tableInfo.name, rmfh);
+    //debug("InsertAll Start, tab")
+    TRY(rmm->OpenFile(smm->RMName(tableInfo.name).c_str(), rmfh));
+    debug("InsertAll OpenFile\n");
     RID rid;
-    rmfh.InsertRec(data, rid);
-    rmm->CloseFile(rmfh);
+    TRY(rmfh.InsertRec(data, rid));
+    TRY(rmm->CloseFile(rmfh));
 
-    debug("InsertAll Middle\n");
     IX_IndexHandle ixih;
     for(int i = 0; i < MAX_INDEX_NUM; ++i) if(tableInfo.index[i].columnID != -1){
         debug("InsertAll i = %d\n", i);
@@ -304,5 +637,50 @@ RC QL_Manager::InsertAll(TableInfo &tableInfo, char *data){
         ixm->CloseIndex(ixih);
     }
 
+    return OK_RC;
+}
+
+RC QL_Manager::DeleteAll(TableInfo &tableInfo, char *data, RID rid){
+    RM_FileHandle rmfh;
+    TRY(rmm->OpenFile(smm->RMName(tableInfo.name).c_str(), rmfh));
+    TRY(rmfh.DeleteRec(rid));
+    TRY(rmm->CloseFile(rmfh));
+    IX_IndexHandle ixih;
+    for(int i = 0; i < MAX_INDEX_NUM; ++i) if(tableInfo.index[i].columnID != -1){
+        debug("InsertAll i = %d\n", i);
+        ixm->OpenIndex(tableInfo.name, i, ixih);
+        ixih.DeleteEntry(data + CntAttrOffset(&tableInfo, tableInfo.index[i].columnID), rid);
+        ixm->CloseIndex(ixih);
+    }
+
+    if(tableInfo.primaryKey.keyNum > 0){
+        ixm->OpenIndex(tableInfo.name, -1, ixih);
+        ixih.DeleteEntry(data + CntAttrOffset(&tableInfo, tableInfo.primaryKey.columnID[0]), rid);
+        ixm->CloseIndex(ixih);
+    }
+    return OK_RC;
+}
+
+RC QL_Manager::UpdateAll(TableInfo &tableInfo, char *new_data, char *old_data, RID rid){
+    RM_FileHandle rmfh;
+    TRY(rmm->OpenFile(smm->RMName(tableInfo.name).c_str(), rmfh));
+    RM_Record rec; rec.SetData(new_data); rec.SetRid(rid);
+    TRY(rmfh.UpdateRec(rec));
+    TRY(rmm->CloseFile(rmfh));
+    IX_IndexHandle ixih;
+    for(int i = 0; i < MAX_INDEX_NUM; ++i) if(tableInfo.index[i].columnID != -1){
+        debug("InsertAll i = %d\n", i);
+        ixm->OpenIndex(tableInfo.name, i, ixih);
+        ixih.DeleteEntry(old_data + CntAttrOffset(&tableInfo, tableInfo.index[i].columnID), rid);
+        ixih.InsertEntry(new_data + CntAttrOffset(&tableInfo, tableInfo.index[i].columnID), rid);
+        ixm->CloseIndex(ixih);
+    }
+
+    if(tableInfo.primaryKey.keyNum > 0){
+        ixm->OpenIndex(tableInfo.name, -1, ixih);
+        ixih.DeleteEntry(old_data + CntAttrOffset(&tableInfo, tableInfo.primaryKey.columnID[0]), rid);
+        ixih.InsertEntry(new_data + CntAttrOffset(&tableInfo, tableInfo.primaryKey.columnID[0]), rid);
+        ixm->CloseIndex(ixih);
+    }
     return OK_RC;
 }

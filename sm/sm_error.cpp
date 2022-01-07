@@ -41,6 +41,7 @@ void SM_PrintError(RC rc, std::string msg = "")
     cerr << "SM : I'm healthy!\n";
     break;
   default:
+    cerr << "RC = " << rc << endl;
     break;
   }
 }

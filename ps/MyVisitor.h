@@ -238,7 +238,50 @@ class MyVisitor:public SQLBaseVisitor{
         return visitChildren(ctx);
     }
 
-
+    virtual antlrcpp::Any visitSelect_table(SQLParser::Select_tableContext *ctx) override {
+        int nSelAttrs = ctx->selectors()->selector().size();
+        int cntC = 0, cntA = 0;
+        for(auto sel : ctx->selectors()->selector()){
+            if(sel->column() != 0) cntC++;
+            else cntA++; 
+        }
+        int nRelations = ctx->identifiers()->Identifier().size();
+        char *relations[nRelations];
+        string relt[nRelations];
+        int i = 0;
+        for(auto rel : ctx->identifiers()->Identifier()){
+            relt[i] = rel->getText();
+            relations[i] = (char *)malloc(relt[i].length());
+            strcpy(relations[i], relt[i].c_str());
+            i++;
+        }
+        int size = ctx->where_and_clause()->where_clause().size();
+        conditions = new Condition[size];
+        RelAttr relAttr[cntC];
+        string strA[cntC];
+        string strB[cntC];
+                
+        if(cntC && cntA){
+            std::cout << "Error" << endl;
+        }
+        else{
+            if(cntC){
+                int i = 0;
+                for(auto sel : ctx->selectors()->selector()){
+                    strA[i] = sel->column()->Identifier(0)->getText();
+                    strB[i] = sel->column()->Identifier(1)->getText();
+                    relAttr[i].relName = (char *)malloc(strA[i].length());
+                    relAttr[i].attrName = (char *)malloc(strB[i].length());
+                    strcpy(relAttr[i].relName, strA[i].c_str());
+                    strcpy(relAttr[i].attrName, strB[i].c_str());
+                    i++;
+                }
+           }
+        }
+        auto retval = visitChildren(ctx);
+        SM_PRINT(qlm->Select(cntC, relAttr, nRelations, relations, size, conditions), "");
+        return retval;
+    }
 
     virtual antlrcpp::Any visitWhere_operator_expression(SQLParser::Where_operator_expressionContext *ctx) override {
         //cout << &(ctx->column()) << " ???? " << end;;

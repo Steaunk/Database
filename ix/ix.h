@@ -12,9 +12,6 @@
 #define PREV_START 10
 #define SIZE_START 19
 #define DATA_HEADER_LENGTH 22
-#define IX_EOF -1
-#define IX_LENGTH_ERROR -2
-#define IX_NOT_FOUND -3
 #define MAX_INDEX_SIZE 3
 #define CHAIN_EOF 0
 
@@ -114,3 +111,7 @@ void setroot(char *data, int root);
 int getroot(char *data);
 void setlen(char *data, int len);
 int getlen(char *data);
+
+#define IX_EOF (START_IX_ERR - 0)
+#define IX_LENGTH_ERROR (START_IX_ERR - 1)
+#define IX_NOT_FOUND (START_IX_ERR - 2)

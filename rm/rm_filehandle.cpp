@@ -167,6 +167,7 @@ RC RM_FileHandle::GetRec(const RID &rid, RM_Record &rec) const {
     SlotNum slotNum;
     TRY(rid.GetSlotNum(slotNum));
 
+    debug("GetRec Middle (pageNum = %d) %d\n", pageNum, rmFileHeader.pageNum);
     PF_PageHandle pageHandle;
     TRY(pfFileHandle.GetThisPage(pageNum, pageHandle));
 
@@ -287,7 +288,7 @@ safe_exit:
 
 
 RC RM_FileHandle::ForcePages(PageNum pageNum){
-    if(pageNum == ALL_PAGES) ASSERT(false); //TO-DO
+    //if(pageNum == ALL_PAGES) ASSERT(false); //TO-DO
 
     TRY(pfFileHandle.ForcePages(pageNum));    
 
