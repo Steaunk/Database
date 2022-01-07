@@ -73,7 +73,9 @@ RC IX_Manager::DestroyIndex  (const char *fileName,          // Destroy index
                              int        indexNo){
   std::string indexFileName = fileName;
   indexFileName += '.';
-  indexFileName += indexNo+'0';
+  char number[25];
+  sprintf(number,"%d",indexNo);
+  indexFileName += number;
   TRY(pfmp->DestroyFile(indexFileName.c_str()));
   return OK_RC;
 

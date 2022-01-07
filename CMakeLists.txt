@@ -30,9 +30,11 @@ include_directories(
         ${PROJECT_SOURCE_DIR}/antlr4-cpp-runtime-4.9.3-source/runtime/src
 )
 
+link_libraries(pf rm ix sm ql ps antlr4-cpp-runtime)
+
 add_executable(database main.cpp)
 
-target_link_libraries(database pf rm sm ix ql ps antlr4-cpp-runtime)
+target_link_libraries(database pf rm ix sm ql ps antlr4-cpp-runtime)
 
 enable_testing()
 
