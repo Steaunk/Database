@@ -86,6 +86,7 @@ RC QL_Manager::DeleteOrUpdate (const char *relName,            // relation to de
             const RelAttr updAttr[],
             const Value rhsValue[]
 ){
+    debug("Delete nUpdAttr = %d\n", nUpdAttr);
     RC rc;
     TableInfo tableInfo;
     TRY(smm->ReadData(relName, &tableInfo));
@@ -203,7 +204,14 @@ RC QL_Manager::DeleteOrUpdate (const char *relName,            // relation to de
         if(flag){
             RID rid; rec.GetRid(rid);
             if(nUpdAttr == 0){
+                PageNum pageNum;
+                SlotNum slotNum;
+                rid.GetPageNum(pageNum);
+                rid.GetSlotNum(slotNum);
+                debug("Delete [%d %d]\n", pageNum, slotNum);
                 rmfh.DeleteRec(rid);
+                RC rc = rmfh.DeleteRec(rid);
+                debug("Delete rc = %d\n", rc);
             }
             else {
                 for(int i = 0; i < nUpdAttr; ++i){

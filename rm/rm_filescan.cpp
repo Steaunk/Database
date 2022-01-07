@@ -48,13 +48,13 @@ RC RM_FileScan::GetNextRec(RM_Record &rec){
                 return RM_EOF;
         }
         else{
-            debug("GetNextRec while data : %d\n", *((int *)data));
+            //debug("GetNextRec while data : %d\n", *((int *)data+4));
             notFound = !Comp(attrType, attrLength, compOp, data + attrOffset, value);
         }
     }
     while(notFound);
     
-    debug("GetNextRec *data : %d\n", *((int *)data));
+    debug("GetNextRec *data : %d\n", *((int *)(data+4)));
     rec.SetData(data);
     rec.SetRid(RID(curPageNum, curSlotNum));
 	return OK_RC;

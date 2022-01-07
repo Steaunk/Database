@@ -76,16 +76,18 @@ RC RM_FileHandle::GetFreeSlot(const PF_PageHandle &pageHandle, SlotNum &slotNum,
 }
 
 RC RM_FileHandle::FindNextSlot(SlotNum &slotNum, PageNum pageNum, char *&data){
-    /*static*/ PF_PageHandle pageHandle;
+    //very strange bug?
+    static PF_PageHandle pageHandle;
     debug("FindNextSlot : %d %d (%d %d) %d\n", 
         slotNum, pageNum, rmFileHeader.recordNumPerPage, 
         rmFileHeader.recordSize, rmFileHeader.pageNum);
-    //if(slotNum == 0){
+    if(slotNum == 0){
         TRY(pfFileHandle.GetThisPage(pageNum, pageHandle));
-    //}
+    }
     RM_Slot slot;
     for(int i = slotNum; i < rmFileHeader.recordNumPerPage; ++i){
         TRY(GetSlot(pageHandle, i, slot));
+        //debug("(%d %d %d) ?\n", pageNum, i, slot);
         if(slot == true){
             slotNum = i;
             GetDataBySlotNum(pageHandle, slotNum, data);
@@ -260,7 +262,14 @@ RC RM_FileHandle::DeleteRec(const RID &rid){
         goto safe_exit;
     }
     
+    debug("DeleteRec [%d %d]\n", pageNum, slotNum);
     SAFE_TRY(SetSlot(pageHandle, slotNum, false))
+    
+    //-------- deleted
+        GetSlot(pageHandle, slotNum, slot);
+        debug("DeleteRec after SetSlot slot = %d\n", slot);
+
+
 
     if(pageHeader->recordNum == rmFileHeader.recordNumPerPage){
         pageHeader->nextFreePage = rmFileHeader.nextFreePage;

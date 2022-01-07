@@ -59,6 +59,8 @@ class SM_Manager {
     RC AddPrimaryKey (const char *relName,
                       int keyNum,
                       const AttrInfo *attributes);
+
+    RC DropPrimaryKey (const char *relName);
     RC Load        (const char *relName,                // Load utility
                     const char *fileName);
     RC Help        ();                                  // Help for database
@@ -83,9 +85,9 @@ void SM_PrintError(RC rc, std::string msg);
 #define SM_DB_NOT_EXISTS (START_SM_WARN + 2)
 #define SM_TABLE_EXISTS (START_SM_WARN + 3)
 #define SM_TABLE_NOT_EXISTS (START_SM_WARN + 4)
-#define SM_UNKNOW_COLUMN (START_QL_WARN + 5)
-#define SM_DUPLICATE_KEY (START_QL_WARN + 6)
-#define SM_DUPLICATE_ENTRY (START_QL_WARN + 7)
+#define SM_UNKNOW_COLUMN (START_SM_WARN + 5)
+#define SM_DUPLICATE_KEY (START_SM_WARN + 6)
+#define SM_DUPLICATE_ENTRY (START_SM_WARN + 7)
 //#define RM_EOF (START_RM_WARN + 2)
 
 // SM ERR

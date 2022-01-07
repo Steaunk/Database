@@ -140,6 +140,14 @@ RC IX_IndexHandle::DeleteEntry(void *pData, const RID &rid){
     page.GetData(data);
     if(getsize(data) == 0){
         data[IS_BOTTOM] = '1';
+        file.GetFirstPage(page);
+        page.GetData(data);
+        setnext(data,root);
+        setroot(data,root);
+        PageNum fpn;
+        page.GetPageNum(fpn);
+        file.MarkDirty(fpn);
+        file.UnpinPage(fpn);
     }
     file.MarkDirty(root);
     file.UnpinPage(root);
@@ -707,8 +715,8 @@ void IX_IndexHandle::update(PageNum fa, PageNum son, int pos){
         file.GetThisPage(next,pnext);
         pprev.GetData(datap);
         pnext.GetData(datan);
-        setprev(datan, prev);
-        setnext(datap, next);
+        if(next != CHAIN_EOF)setprev(datan, prev);
+        if(prev != CHAIN_EOF || datas[IS_BOTTOM] == '1')setnext(datap, next);
         int len = getsize(dataf);
         for(int i = pos; i < len; ++i){
             int posf = i*(length + 4) + DATA_HEADER_LENGTH;

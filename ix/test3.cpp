@@ -14,7 +14,6 @@ struct data_{
 	RID p;
 };
 int main(){
-	puts("NULL");
 	RC code;
 	if((code = ixm.CreateIndex("test_index",0,INT,4))){
 		cout << "Create failed" << endl;
@@ -26,7 +25,7 @@ int main(){
 		PF_PrintError(code);
 		assert(false);
 	}
-	cout << "open success" << endl;
+	cout << "Open success" << endl;
 	data_ t1;
 	for(int i = 0; i <= 10; ++i){
 		t1.a = i;
@@ -80,9 +79,6 @@ int main(){
 	ixs.GetNextEntry(ans);
 	PageNum p;
 	SlotNum s;
-	ans.GetPageNum(p);
-	ans.GetSlotNum(s);
-	cout << p << " " << s << endl;
 	assert(ans==RID(51,51));
 	assert(ixs.GetNextEntry(ans) != -1);
 	assert(ixh.DeleteEntry(&t, RID(5,5)) == -3);
@@ -98,7 +94,7 @@ int main(){
 	assert(ixs.GetNextEntry(ans) != -1);
 	assert(ans==RID(13,13));
 	cout << "OK" << endl;
-	ixm.CloseIndex(ixh);
-	ixm.DestroyIndex("test_index",0);
+	TRY(ixm.CloseIndex(ixh));
+	TRY(ixm.DestroyIndex("test_index",0));
 	return 0;
 }
