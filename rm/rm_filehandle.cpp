@@ -76,13 +76,13 @@ RC RM_FileHandle::GetFreeSlot(const PF_PageHandle &pageHandle, SlotNum &slotNum,
 }
 
 RC RM_FileHandle::FindNextSlot(SlotNum &slotNum, PageNum pageNum, char *&data){
-    static PF_PageHandle pageHandle;
-    debug("FindNextSlot : %d %d (%d %d) %d", 
+    /*static*/ PF_PageHandle pageHandle;
+    debug("FindNextSlot : %d %d (%d %d) %d\n", 
         slotNum, pageNum, rmFileHeader.recordNumPerPage, 
         rmFileHeader.recordSize, rmFileHeader.pageNum);
-    if(slotNum == 0){
+    //if(slotNum == 0){
         TRY(pfFileHandle.GetThisPage(pageNum, pageHandle));
-    }
+    //}
     RM_Slot slot;
     for(int i = slotNum; i < rmFileHeader.recordNumPerPage; ++i){
         TRY(GetSlot(pageHandle, i, slot));

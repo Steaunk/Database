@@ -244,11 +244,102 @@ RC SM_Manager::ReadData(const char *relName, TableInfo *data){
     return OK_RC;
 }
 
+RC SM_Manager::AddPrimaryKey(const char *relName, int keyNum, const AttrInfo *attributes){
+    TableInfo tableInfo;
+    TRY(ReadData(relName, &tableInfo));
+    if(tableInfo.primaryKey.keyNum > 0) return SM_DUPLICATE_KEY;
+    tableInfo.primaryKey.keyNum = keyNum;
+    for(int i = 0; i < keyNum; ++i){
+        RC rc = GetColumnIDByName(attributes[i].attrName, &tableInfo, tableInfo.primaryKey.columnID[i]);
+        if(rc != OK_RC){
+            if(rc == SM_UNKNOW_COLUMN){
+                std::cout << "Unknown column '" << attributes[i].attrName << "'\n";
+            }
+            return rc;
+        }
+    }
+
+    int pkOffset[keyNum];
+    //----- check duplicate --- 
+    for(int i = 0; i < keyNum; ++i){
+        if(tableInfo.columnAttr[tableInfo.primaryKey.columnID[i]].isPrimaryKey == true)
+            return SM_DUPLICATE_KEY;
+        tableInfo.columnAttr[tableInfo.primaryKey.columnID[i]].isPrimaryKey = true;
+        pkOffset[i] = CntAttrOffset(&tableInfo, tableInfo.primaryKey.columnID[i]);
+    }
+    //----- check end ---
+
+    int first_key_id = tableInfo.primaryKey.columnID[0];
+    auto &first_key = tableInfo.columnAttr[first_key_id];
+    ixm->CreateIndex(relName, tableInfo.indexNum, first_key.attrType, first_key.attrLength);
+    IX_IndexHandle ixih;
+    ixm->OpenIndex(relName, tableInfo.indexNum, ixih);
+    RM_FileHandle rmfh;
+    rmm->OpenFile(RMName(relName).c_str(), rmfh);
+    RM_FileScan rmfs;
+    rmfs.OpenScan(rmfh, AttrType(0), 0, 0, NO_OP, nullptr);
+    RC rc;
+    RM_Record rec;
+    bool flag = true;
+    while((rc = rmfs.GetNextRec(rec)) != RM_EOF){
+        flag = false;
+        if(rc != OK_RC) break;    
+        IX_IndexScan ixis;
+        char *data;
+        RID rid;
+        rec.GetData(data);
+        ixis.OpenScan(ixih, EQ_OP, data + pkOffset[0]);  
+        rc = ixis.GetNextEntry(rid);
+        if(rc == IX_EOF) flag = true;
+        if(flag == false){
+            RM_Record trec;
+            char *tdata;
+            
+            rc = rmfh.GetRec(rid, trec);
+            if(rc != OK_RC) break;
+
+            trec.GetData(tdata);
+            for(int i = 1; i < keyNum; ++i){
+                auto &t = tableInfo.columnAttr[tableInfo.primaryKey.columnID[i]];
+                if(rmfs.Comp(t.attrType, t.attrLength, EQ_OP, data + pkOffset[i], tdata + pkOffset[i]) == false){
+                    flag = true;
+                    break;
+                }
+            }
+        }
+        if(flag == false) break;
+        rec.GetRid(rid);
+        ixih.InsertEntry(data + pkOffset[0], rid);
+    }
+
+    if(flag == false){
+        ixm->DestroyIndex(relName, tableInfo.indexNum);
+        if(rc == OK_RC){
+            rc = SM_DUPLICATE_ENTRY;
+            return rc;
+        }
+    }
+
+    strcpy(tableInfo.index[tableInfo.indexNum].name, "Primary");
+    tableInfo.index[tableInfo.indexNum].columnID = tableInfo.primaryKey.columnID[0];
+    tableInfo.indexNum++;
+    WriteData(relName, &tableInfo);
+    return OK_RC;
+}
+
 RC SM_Manager::GetTableInfo(const char *relName, TableInfo &tableInfo){
     if(isOpenDb == false) return SM_DB_NOT_OPEN;
     if(!fs::exists(relName)) return SM_TABLE_NOT_EXISTS;
     ReadData(relName, &tableInfo);
     return OK_RC;
+}
+
+int SM_Manager::CntAttrOffset(TableInfo *tableInfo, const int &id){
+    int offset = 0;
+    for(int i = 0; i < id; ++i){
+        offset += tableInfo->columnAttr[i].attrLength;
+    }
+    return offset;
 }
 
 std::string SM_Manager::RMName(const char *relName){

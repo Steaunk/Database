@@ -28,6 +28,12 @@ void SM_PrintError(RC rc, std::string msg = "")
   /*case SM_COLUMN_NOT_EXSITS:
     cerr << "Column '" << msg << "' doesn't exist\n";
     break; */
+  case SM_DUPLICATE_KEY:
+    cerr << "Multiple primary key defined\n";
+    break;
+  /*case SM_UNKNOW_COLUMN:
+    cerr << "Unknown column '" << msg << "'\n";
+    break;*/
   case OK_RC: 
     cerr << "SM : I'm healthy!\n";
     break;

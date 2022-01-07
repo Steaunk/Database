@@ -12,8 +12,12 @@ class MyVisitor:public SQLBaseVisitor{
     SM_Manager *sm;
     QL_Manager *qlm;
     int cnt = 0;
+    int cnt2 = 0;
+    int cnt3 = 0;
+    int cnt4 = 0;
     AttrInfo *attrInfo;
     Condition *conditions;
+    AttrInfo *attrInfo2;
     public:
     MyVisitor():sm(nullptr){}
     MyVisitor(SM_Manager &smm, QL_Manager &qlm):sm(&smm), qlm(&qlm){}
@@ -57,11 +61,28 @@ class MyVisitor:public SQLBaseVisitor{
             cout << f->getRuleIndex() << "?";
         }*/
         attrInfo = new AttrInfo[attrCount];
+        attrInfo2 = new AttrInfo[attrCount];
         //ctx->field_list()->
         cnt = 0;
+        cnt2 = 0;
+        cnt3 = 0;
         auto retval = visitChildren(ctx);
-        SM_PRINT(sm->CreateTable(s.c_str(), attrCount, attrInfo), s.c_str());
+        if(cnt2 > 1){
+            std::cout << "Multiple primary key defined\n";
+        }
+        else {
+            RC rc = sm->CreateTable(s.c_str(), cnt, attrInfo);
+            if(rc != OK_RC) SM_PrintError(rc, s.c_str());
+            else {
+                rc = sm->AddPrimaryKey(s.c_str(), cnt3, attrInfo2);
+                if(rc != OK_RC){
+                    sm->DropTable(s.c_str());
+                    SM_PrintError(rc, s.c_str());
+                }
+            }
+       }
         delete[] attrInfo;
+        delete[] attrInfo2;
         return retval;
     }
 
@@ -86,6 +107,12 @@ class MyVisitor:public SQLBaseVisitor{
     }
 
     virtual antlrcpp::Any visitPrimary_key_field(SQLParser::Primary_key_fieldContext *ctx) override {
+        for(auto i : ctx->identifiers()->Identifier()){
+            attrInfo2[cnt3].attrName = (char *)malloc(i->getText().length());
+            strcpy(attrInfo2[cnt3].attrName, i->getText().c_str());
+            cnt3++;
+        }
+        cnt2++;
         return visitChildren(ctx);
     }
 
