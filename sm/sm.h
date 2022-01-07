@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstring>
 #include "../base.h"
 #include "../rm/rm.h"
 #include "../ix/ix.h"
@@ -24,16 +25,18 @@ struct DataAttrInfo {
 
 
 class SM_Manager {
-
   private:
+    IX_Manager *ixm;
+    RM_Manager *rmm;
     bool isOpenDb;
-    void WriteData(const char *relName, TableInfo *data);
-    void ReadData(const char *relName, TableInfo *data);
-    RC GetColumnIDByName(const char *relName, TableInfo *tableInfo, int &ID);
+    RC WriteData(const char *relName, TableInfo *data);
   public:
+    std::string RMName(const char *relName);
        SM_Manager  (IX_Manager &ixm, RM_Manager &rmm);  // Constructor
        ~SM_Manager ();                                  // Destructor
-       SM_Manager  ();                                  // Constructor for test
+       SM_Manager  () = delete;                                  // Constructor for test
+    RC GetColumnIDByName(const char *attrName, TableInfo *tableInfo, int &ID);
+    RC ReadData(const char *relName, TableInfo *data);
     RC OpenDb      (const char *dbName);                // Open database
     RC CloseDb     ();                                  // Close database
     RC CreateDb    (const char *dbName);
@@ -54,11 +57,19 @@ class SM_Manager {
                     const char *fileName);
     RC Help        ();                                  // Help for database
     RC Help        (const char *relName);               // Help for relation
-    RC Print       (const char *relName);               // Print relation
+    RC ShowDbs       ();              // Show Databases
+    RC ShowTables   ();
+    RC DescTable   (const char *relName);
     RC Set         (const char *paramName,              // Set system parameter
                     const char *value);
+    RC GetTableInfo (const char *relName, TableInfo &tableInfo);
+
+    std::string RelNameCat(const char *relNameA, const char *relNameB); //数据表名字拼接
+    std::string AttrNameCat(const char *relName, const char *attrName); //数据表与字段名字拼接
+    RC InnerJoin(const char *relNameA, const char *relNameB); //Inner Join
 };
 
+void SM_PrintError(RC rc, std::string msg);
 
 // SM WARN
 #define SM_DB_NOT_OPEN (START_SM_WARN + 0) // haven't use any database
@@ -66,10 +77,12 @@ class SM_Manager {
 #define SM_DB_NOT_EXISTS (START_SM_WARN + 2)
 #define SM_TABLE_EXISTS (START_SM_WARN + 3)
 #define SM_TABLE_NOT_EXISTS (START_SM_WARN + 4)
-#define SM_COLUMN_NOT_EXSITS (START_SM_WARN + 5)
+#define SM_UNKNOW_COLUMN (START_SM_WARN + 5)
 //#define RM_EOF (START_RM_WARN + 2)
 
 // SM ERR
 #define SM_CREATE_DB_FAIL (START_SM_ERR - 0) // fail to craete new database
 #define SM_DB_OPEN_ERR (START_SM_ERR - 1) // can't open database
 #define SM_DB_CLOSE_ERR (START_SM_ERR - 2) // can't close database
+#define SM_DB_DUPLICATE_INDEX (START_SM_ERR - 3) //duplicate index
+#define SM_DB_WRONG_INDEX (START_SM_ERR - 4) //create a index which is not in column

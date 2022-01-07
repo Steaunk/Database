@@ -68,12 +68,18 @@ enum AttrType {
     STRING
 };
 
+static const char *AttrTypeMsg[3] = {
+    "INT",
+    "FLOAT",
+    "CHAR"
+};
+
 //
 // Comparison operators
 //
 enum CompOp {
     NO_OP,                                      // no comparison
-    EQ_OP, NE_OP, LT_OP, GT_OP, LE_OP, GE_OP    // binary atomic operators
+    EQ_OP, NE_OP, LT_OP, GT_OP, LE_OP, GE_OP   // binary atomic operators
 };
 
 //

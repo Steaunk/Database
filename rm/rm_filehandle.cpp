@@ -23,6 +23,9 @@ RC RM_FileHandle::AllocatePage(PF_PageHandle &pageHandle, PageNum &pageNum){
     TRY(pfFileHandle.AllocatePage(pageHandle));
     TRY(pageHandle.GetPageNum(pageNum));
     rmFileHeader.nextFreePage = pageNum;
+
+    rmFileHeader.pageNum++;
+
     RM_PageHeader *pageHeader;
     char *data;
     TRY(GetPageHeaderAndData(pageHandle, pageHeader, data));
@@ -72,6 +75,28 @@ RC RM_FileHandle::GetFreeSlot(const PF_PageHandle &pageHandle, SlotNum &slotNum,
     return RM_NO_FREE_SLOT;
 }
 
+RC RM_FileHandle::FindNextSlot(SlotNum &slotNum, PageNum pageNum, char *&data){
+    static PF_PageHandle pageHandle;
+    debug("FindNextSlot : %d %d (%d %d) %d", 
+        slotNum, pageNum, rmFileHeader.recordNumPerPage, 
+        rmFileHeader.recordSize, rmFileHeader.pageNum);
+    if(slotNum == 0){
+        TRY(pfFileHandle.GetThisPage(pageNum, pageHandle));
+    }
+    RM_Slot slot;
+    for(int i = slotNum; i < rmFileHeader.recordNumPerPage; ++i){
+        TRY(GetSlot(pageHandle, i, slot));
+        if(slot == true){
+            slotNum = i;
+            GetDataBySlotNum(pageHandle, slotNum, data);
+            return OK_RC;
+        }
+    }
+    slotNum = -1; 
+    TRY(pfFileHandle.UnpinPage(pageNum));
+    return OK_RC;
+}
+
 RC RM_FileHandle::GetDataBySlotNum(const PF_PageHandle &pageHandle, const SlotNum &slotNum, char *&data) const{
     TRY(pageHandle.GetData(data));
     data += slotNum * rmFileHeader.recordSize + rmFileHeader.bitmapOffset + rmFileHeader.bitmapSize;
@@ -113,12 +138,12 @@ PF_FileHandle RM_FileHandle::GetFileHandle() const {
     return pfFileHandle;
 }
 
-bool RM_FileHandle::IsHeaderModified() const {
+/*bool RM_FileHandle::IsHeaderModified() const {
     return isHeaderModified;
-}
+}*/
 
 void RM_FileHandle::InitSetting(){
-    isHeaderModified = false;
+    //isHeaderModified = false;
 }
 
 void RM_FileHandle::SetFileHandle(const PF_FileHandle &pfFileHandle){
@@ -155,6 +180,7 @@ safe_exit:
 }
 
 RC RM_FileHandle::InsertRec(const char *pData, RID &rid){
+    debug("InsertRec *((int *)pData) = %d\n", *((int *)pData));
     RC rc = OK_RC;
     PageNum pageNum;
     PF_PageHandle pageHandle;
@@ -179,7 +205,7 @@ RC RM_FileHandle::InsertRec(const char *pData, RID &rid){
     pageHeader->recordNum += 1;
     if(pageHeader->recordNum == rmFileHeader.recordNumPerPage){
         rmFileHeader.nextFreePage = pageHeader->nextFreePage;
-        isHeaderModified = true;
+        //isHeaderModified = true;
     }
 
     rid = RID(pageNum, slotNum);
@@ -239,7 +265,7 @@ RC RM_FileHandle::DeleteRec(const RID &rid){
     if(pageHeader->recordNum == rmFileHeader.recordNumPerPage){
         pageHeader->nextFreePage = rmFileHeader.nextFreePage;
         rmFileHeader.nextFreePage = pageNum;
-        isHeaderModified = true;
+        //isHeaderModified = true;
     }
     pageHeader->recordNum -= 1;
 

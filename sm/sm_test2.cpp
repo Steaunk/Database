@@ -22,6 +22,11 @@ AttrInfo tc1 = (AttrInfo){(char *)"steaunk", STRING, 44};
 
 const int attrCount = 3;
 
+PF_Manager pfm;
+RM_Manager rmm(pfm);
+IX_Manager ixm(pfm);
+
+
 static RC test1(){
     fs::path p = fs::current_path();
     fs::path fdb = "/first_db";
@@ -29,7 +34,7 @@ static RC test1(){
     cout << p << endl;
     cout << fs::current_path() << endl;
 
-    SM_Manager sm;
+    SM_Manager sm(ixm, rmm);
     cout << "Create Database" << endl;
     TRY(sm.CreateDb("first_db"));
     cout << "Open Database" << endl;

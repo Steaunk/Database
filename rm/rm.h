@@ -55,7 +55,8 @@ class RM_FileHandle {
 
     RM_FileHeader rmFileHeader;
     PF_FileHandle pfFileHandle;
-    bool isHeaderModified;
+    //bool isHeaderModified;
+
 
     int FindZero(char value) const; //找到一个字节中的第一个0所在位置，其中-1位无。
 
@@ -77,7 +78,7 @@ class RM_FileHandle {
     
     void CopyFromFileHeader(RM_FileHeader *fileHeader);
 
-    bool IsHeaderModified() const;
+    //bool IsHeaderModified() const;
 
     void InitSetting();
 
@@ -107,6 +108,8 @@ public:
     // Forces a page (along with any contents stored in this class)
     // from the buffer pool to disk.  Default value forces all pages.
     RC ForcePages (PageNum pageNum = ALL_PAGES);
+
+    RC FindNextSlot(SlotNum &slotNum, PageNum pageNum, char *&data);
 };
 
 //
@@ -135,6 +138,12 @@ public:
                   ClientHint pinHint = NO_HINT); // Initialize a file scan
     RC GetNextRec(RM_Record &rec);               // Get next matching record
     RC CloseScan ();                             // Close the scan
+    bool Comp(AttrType attrType,
+            int attrLength,
+            CompOp compOp,
+            void *lvalue,
+            void *rvalue
+            );
 };
 
 //
