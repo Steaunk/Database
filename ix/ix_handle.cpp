@@ -218,8 +218,8 @@ bool IX_IndexHandle::is_full(PageNum cur){
     file.GetThisPage(cur,page);
     char *data;
     page.GetData(data);
-    //bool ans = getsize(data) * (length+8) + DATA_HEADER_LENGTH + (length+8) >= PF_PAGE_SIZE - 4;
-    bool ans = getsize(data) >= MAX_INDEX_SIZE;
+    bool ans = getsize(data) * (length+8) + DATA_HEADER_LENGTH + (length+8) >= PF_PAGE_SIZE - 4;
+    //bool ans = getsize(data) >= MAX_INDEX_SIZE;
     PageNum pn;
     page.GetPageNum(pn);
     file.UnpinPage(pn);
