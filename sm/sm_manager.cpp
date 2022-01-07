@@ -257,6 +257,34 @@ std::string SM_Manager::RMName(const char *relName){
     return s;
 }
 
+std::string SM_Manager::RelNameCat(const char *relNameA, const char *relNameB){
+    std::string s = relNameA;
+    return s + "." + relNameB;
+} //数据表名字拼接
+std::string SM_Manager::AttrNameCat(const char *relName, const char *attrName){
+    std::string s = attrName;
+    if(s.find(".") != -1)return attrName;
+    return relName + ("." + s);
+} //数据表与字段名字拼接
+RC SM_Manager::InnerJoin(const char *relNameA, const char *relNameB){
+    TableInfo tableA,tableB;
+    ReadData(relNameA,&tableA);
+    ReadData(relNameB,&tableB);
+    int count = tableA.columnNum + tableB.columnNum;
+    AttrInfo *attrs = new AttrInfo[count + 5];
+    for(int i = 0; i < tableA.columnNum; ++i){
+        strcpy(attrs[i].attrName, (this->AttrNameCat(relNameA,tableA.columnAttr[i].name)).c_str());
+        attrs[i].attrType = tableA.columnAttr[i].attrType;
+        attrs[i].attrLength = tableA.columnAttr[i].attrLength;
+    }
+    for(int i = 0; i < tableB.columnNum; ++i){
+        strcpy(attrs[i+tableA.columnNum].attrName, (this->AttrNameCat(relNameA,tableB.columnAttr[i].name)).c_str());
+        attrs[i+tableA.columnNum].attrType = tableB.columnAttr[i].attrType;
+        attrs[i+tableA.columnNum].attrLength = tableB.columnAttr[i].attrLength;
+    }
+    this->CreateTable(this->RelNameCat(relNameA,relNameB).c_str(),count,attrs);
+}
+
 /*RC SM_Manager::CheckColumn(cnost char *relName, const char *relName_t, const char *attrName_t){
 
     return OK_RC;
