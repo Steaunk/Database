@@ -531,6 +531,7 @@ RC QL_Manager::DeleteOrUpdate (const char *relName,            // relation to de
         }
     }
 
+
     if(useIndex){
         assert(false);
     }
