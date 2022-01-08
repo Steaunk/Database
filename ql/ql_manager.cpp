@@ -256,14 +256,84 @@ RC QL_Manager::Select  (int           nSelAttrs,        // # attrs in Select cla
         //TableInfo tableInfo;
     }
     else{
-        debug("BEGIN\n");
+        //debug("BEGIN\n");
         string name = relations[0];
         for(int i = 1; i < nRelations; ++i){
-            debug("test");
-            smm->InnerJoin(name.c_str(), relations[i+1]);
-            name = smm->RelNameCat(name.c_str(), relations[i+1]);
+            debug("test\n");
+            smm->InnerJoin(name.c_str(), relations[i]);
+            this->Join(name.c_str(), relations[i]);
+            if(i > 1) smm->DropTable(name.c_str());
+            name = smm->RelNameCat(name.c_str(), relations[i]);
         }
-        smm->DescTable(name.c_str());
+
+        RM_FileHandle rmfh;
+        rmm->OpenFile(smm->RMName(name.c_str()).c_str(), rmfh);
+        RM_FileScan rmfs;
+        rmfs.OpenScan(rmfh, AttrType(0), 0, 0, NO_OP, nullptr);
+        RM_Record rec;
+        int num = 0;
+
+
+        AttrType attrType[nConditions];
+        int attrLength[nConditions], lAttrOffset[nConditions], rAttrOffset[nConditions];
+        TableInfo tableInfo;
+        smm->ReadData(name.c_str(), &tableInfo);
+        PrintTable(tableInfo, nSelAttrs, selAttrs);
+        for(int i = 0; i < nConditions; ++i){
+            int ID;
+            smm->GetColumnIDByName(
+                        smm->AttrNameCat(conditions[i].lhsAttr.relName, 
+                                         conditions[i].lhsAttr.attrName).c_str(),
+                        &tableInfo, ID);
+            attrType[i] = tableInfo.columnAttr[ID].attrType;
+            attrLength[i] = tableInfo.columnAttr[ID].attrLength;
+            lAttrOffset[i] = CntAttrOffset(&tableInfo, ID);
+            if(conditions[i].bRhsIsAttr){
+                smm->GetColumnIDByName(
+                        smm->AttrNameCat(conditions[i].rhsAttr.relName, 
+                                         conditions[i].rhsAttr.attrName).c_str(),
+                        &tableInfo, ID);
+                rAttrOffset[i] = CntAttrOffset(&tableInfo, ID);
+            }
+
+
+        }
+        RC rc = OK_RC;
+        int cnt = 0;
+        puts("???\n");
+        while((rc = rmfs.GetNextRec(rec)) != RM_EOF){
+            if(rc != OK_RC) goto safe_exit;
+            char *data;
+            rec.GetData(data);
+            bool flag = true;
+
+            for(int i = 0; i < nConditions; ++i){
+                auto &c = conditions[i];
+                if(!RM_FileHandle::Comp(attrType[i], attrLength[i], c.op, 
+                                    (void *)(data + lAttrOffset[i]),
+                                    (void *)(c.bRhsIsAttr ? (data + rAttrOffset[i]) : c.rhsValue.data))){
+                    flag = false;
+                    break;
+                } 
+            }
+            puts("DFS");
+            if(flag == true){
+                if(limit == -1 || (num >= offset && num < offset + limit)){
+                    PrintData(tableInfo, nSelAttrs, selAttrs, data);
+                    cnt++;
+                }
+                if(limit != -1 && num >= offset + limit){
+                    break;
+                }
+                ++num;
+            }
+        }
+safe_exit:
+        smm->DropTable(name.c_str());
+        rmfs.CloseScan();
+        rmm->CloseFile(rmfh);
+        if(rc == RM_EOF) rc = OK_RC;
+        return rc; 
     }
         //TRY(smm->GetTableInfo())
         //bool useIndex = false;
@@ -509,7 +579,7 @@ RC QL_Manager::CheckColumn(int  nSelAttrs,
     for(int i = 0; i < nConditions; ++i){
         bool flag = false;
         int lID, rID, j = 0;
-
+        debug("Start\n");
         for(; j < nRelations; ++j){
             if(strcmp(conditions[i].lhsAttr.relName, relations[j]) == 0 && 
                 (smm->GetColumnIDByName(conditions[i].lhsAttr.attrName, &tableInfo[j], lID) == OK_RC)
