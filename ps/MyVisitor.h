@@ -250,7 +250,7 @@ class MyVisitor:public SQLBaseVisitor{
                     string ag = sel->aggregator()->getText();
                     if(ag == "COUNT"){
                         aggr[cntA] = COUNT;
-                    }else if(ag == "AVERAGE"){
+                    }else if(ag == "AVG"){
                         aggr[cntA] = AVERAGE;
                     }else if(ag == "MAX"){
                         aggr[cntA] = MAX;
@@ -283,10 +283,9 @@ class MyVisitor:public SQLBaseVisitor{
             size = ctx->where_and_clause()->where_clause().size();
             conditions = new Condition[size + 1];
         }
-        RelAttr relAttr[cntC];
-        string strA[cntC];
-        string strB[cntC];
-                
+        RelAttr relAttr[cntC + cntA];
+        string strA[cntC + cntA];
+        string strB[cntC + cntA];
         if(cntC && cntA){
             std::cout << "Error" << endl;
         }
@@ -305,14 +304,16 @@ class MyVisitor:public SQLBaseVisitor{
            }else{
                int i = 0;
                 for(auto sel : ctx->selectors()->selector()){
+
                     if(sel->aggregator() == nullptr && sel->column() == nullptr){
+                        relAttr[i].relName = relAttr[i].attrName = nullptr;
                         ++i;
                         continue;
                     }
                     strA[i] = sel->column()->Identifier(0)->getText();
                     strB[i] = sel->column()->Identifier(1)->getText();
-                    relAttr[i].relName = (char *)malloc(strA[i].length());
-                    relAttr[i].attrName = (char *)malloc(strB[i].length());
+                    relAttr[i].relName = (char *)malloc(strA[i].length()+5);
+                    relAttr[i].attrName = (char *)malloc(strB[i].length()+5);
                     strcpy(relAttr[i].relName, strA[i].c_str());
                     strcpy(relAttr[i].attrName, strB[i].c_str());
                     i++;

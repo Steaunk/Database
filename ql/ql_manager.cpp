@@ -150,7 +150,7 @@ RC QL_Manager::SelectChecked(int nSelAttrs,
 
     int cnt = 0;
 
-    PrintTable(tableInfo, nSelAttrs, selAttrs);
+    if(nAggregator == 0) PrintTable(tableInfo, nSelAttrs, selAttrs);
 
     auto func = [&](char *data, bool &flag){
         for(int i = 0; i < nConditions; ++i){
@@ -164,6 +164,9 @@ RC QL_Manager::SelectChecked(int nSelAttrs,
         }
         
     };
+
+    debug("nAggregator %d\n", nAggregator);
+
     int valueInt[nAggregator + 1];
     float valueFloat[nAggregator + 1];
     for(int i = 0; i < nAggregator; ++i){
@@ -181,6 +184,7 @@ RC QL_Manager::SelectChecked(int nSelAttrs,
         case MIN:
             valueInt[i] = 2147483647;
             valueFloat[i] = 1e-10;
+            break;
         default:
             break;
         }
@@ -246,13 +250,15 @@ RC QL_Manager::SelectChecked(int nSelAttrs,
                 AttrType attrType;
                 if(aggregators[i] != COUNT){
                     smm->GetColumnIDByName(selAttrs[i].attrName, &tableInfo, ID);
-                    attrType = tableInfo.columnAttr[i].attrType;
+                    attrType = tableInfo.columnAttr[ID].attrType;
                 }
                 switch (aggregators[i])
                 {
                 case COUNT:
+                    debug("HERES\n");
                     std::cout << "COUNT(" << selAttrs[i] << ") = " << cnt << std::endl;
                     /* code */
+                    debug("OUT\n");
                     break;
                 case AVERAGE: 
                     if(attrType == FLOAT) std::cout << "AVG(" << selAttrs[i] << ") = " << 1.0 * valueFloat[i] / cnt << std::endl;
