@@ -328,9 +328,34 @@ bool RM_FileHandle::Comp(AttrType attrType,
         else if(attrType == FLOAT) flag = (*((float *)lvalue) > *((float *)rvalue));
         else flag = strncmp((char *)lvalue, (char *)rvalue, attrLength) > 0;
         return compOp == LE_OP ? !flag : flag;
+    case LIKE:
+        if(attrType != STRING) return false;
+        else return LikeComp((char *)lvalue, (char *)rvalue);
+        break;
 
     default:
         break;
     }
     return false;
+}
+
+bool RM_FileHandle::LikeComp(char *lvalue, char *rvalue){
+    int lLen = strlen(lvalue);
+    int rLen = strlen(rvalue);
+    bool vis[lLen + 1][rLen + 1];
+    for(int i = 0; i < lLen; ++i)
+        for(int j = 0; j < rLen; ++j)
+            vis[i][j] = 0; 
+    vis[0][0] = 1;
+    for(int i = 0; i < lLen; ++i){
+        for(int j = 0; j < rLen; ++j){
+            if(lvalue[i] == rvalue[j] || rvalue[j] == '_')
+                vis[i + 1][j + 1] |= vis[i][j];
+            if(rvalue[j] == '%'){
+                vis[i + 1][j] |= vis[i][j];
+                vis[i][j + 1] |= vis[i][j];
+            }
+        } 
+    }
+    return vis[lLen][rLen];
 }

@@ -255,6 +255,16 @@ RC QL_Manager::Select  (int           nSelAttrs,        // # attrs in Select cla
         TRY(SelectChecked(nSelAttrs, selAttrs, relations[0], nConditions, conditions,limit,offset));
         //TableInfo tableInfo;
     }
+    else{
+        debug("BEGIN\n");
+        string name = relations[0];
+        for(int i = 1; i < nRelations; ++i){
+            debug("test");
+            smm->InnerJoin(name.c_str(), relations[i+1]);
+            name = smm->RelNameCat(name.c_str(), relations[i+1]);
+        }
+        smm->DescTable(name.c_str());
+    }
         //TRY(smm->GetTableInfo())
         //bool useIndex = false;
 
@@ -513,7 +523,7 @@ RC QL_Manager::CheckColumn(int  nSelAttrs,
                 conditions[i].lhsAttr.attrName << "' in where clause\n";
             return QL_UNKNOW_COLUMN;
         }
-
+        debug("Middle\n");
         flag = true;
         if(conditions[i].bRhsIsAttr == true){
             int k = 0;

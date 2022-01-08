@@ -193,7 +193,7 @@ RC SM_Manager::DescTable(const char *relName){
     std::cout << "### 数据表 " << relName << "\n\n";
 
     for(int i = 0; i < tableInfo.columnNum; ++i){
-        std::cout << tableInfo.columnAttr[i].name << " ";
+        std::cout << tableInfo.columnAttr[i].name << "\t";
         switch (tableInfo.columnAttr[i].attrType)
         {
         case INT:
@@ -208,6 +208,7 @@ RC SM_Manager::DescTable(const char *relName){
         default:
             break;
         }
+        std::cout << "\t";
         if(tableInfo.columnAttr[i].isPrimaryKey) std::cout << "PRI ";
         std::cout << std::endl;
     }

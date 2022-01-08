@@ -116,6 +116,7 @@ public:
                     CompOp compOp,
                     void *lvalue,
                     void *rvalue);
+    static bool LikeComp(char *lvalue, char *rvalue);
 };
 
 //

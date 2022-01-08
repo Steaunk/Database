@@ -44,7 +44,7 @@ int main(){
 	chdir("dbs");
 	while(true){
 		std::cout << ">>> ";
-		getline(std::cin,s);
-		parse(s);
+		getline(std::cin,s, ';');
+		parse(s + ';');
 	}
 }
