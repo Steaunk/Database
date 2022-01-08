@@ -728,3 +728,48 @@ RC QL_Manager::UpdateAll(TableInfo &tableInfo, char *new_data, char *old_data, R
     }
     return OK_RC;
 }
+
+RC QL_Manager::Join(const char *relNameA, const char *relNameB){
+    smm->InnerJoin(relNameA, relNameB);
+    RM_FileHandle rmh,rmha,rmhb;
+    rmm->OpenFile(smm->RMName(smm->RelNameCat(relNameA,relNameB).c_str()).c_str(), rmh);
+    rmm->OpenFile(smm->RMName(relNameA).c_str(),rmha);
+    rmm->OpenFile(smm->RMName(relNameB).c_str(),rmhb);
+    RM_FileScan sa,sb;
+    sa.OpenScan(rmha,INT,0,0,NO_OP,nullptr);
+    sb.OpenScan(rmhb,INT,0,0,NO_OP,nullptr);
+    RC rca,rcb;
+    RM_Record ra,rb;
+    int lena, lenb;
+    TableInfo tablea,tableb;
+    smm->ReadData(relNameA,&tablea);
+    smm->ReadData(relNameB,&tableb);
+    lena = tablea.size;
+    lenb = tableb.size;
+    while((rca = sa.GetNextRec(ra)) != RM_EOF){
+        while((rcb = sb.GetNextRec(rb)) != RM_EOF){
+            if(rca != 0 || rcb != 0){
+                sa.CloseScan();
+                sb.CloseScan();
+                rmm->CloseFile(rmh);
+                rmm->CloseFile(rmha);
+                rmm->CloseFile(rmhb);
+                return rca == 0?rcb:rca;
+            }
+            RID temp;
+            char *dataa,*datab;
+            ra.GetData(dataa);
+            rb.GetData(datab);
+            char *data = new char [lena+lenb+5];
+            memcpy(data,dataa,sizeof(char) * lena);
+            memcpy(data+lena,datab,sizeof(char) * lenb);
+            rmh.InsertRec(data,temp);
+        }
+    }
+    sa.CloseScan();
+    sb.CloseScan();
+    rmm->CloseFile(rmh);
+    rmm->CloseFile(rmha);
+    rmm->CloseFile(rmhb);
+    return OK_RC;
+}

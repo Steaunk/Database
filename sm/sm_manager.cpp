@@ -497,6 +497,7 @@ RC SM_Manager::InnerJoin(const char *relNameA, const char *relNameB){
     }
     this->CreateTable(this->RelNameCat(relNameA,relNameB).c_str(),count,attrs);
     delete[] attrs;
+    return OK_RC;
 }
 
 /*RC SM_Manager::CheckColumn(cnost char *relName, const char *relName_t, const char *attrName_t){
