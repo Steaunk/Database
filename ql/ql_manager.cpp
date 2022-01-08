@@ -8,7 +8,8 @@
 
 
 ostream &operator<<(ostream &s, const RelAttr &ra){
-    s << ra.relName << "." << ra.attrName;
+    if(ra.attrName == nullptr) s << "*";
+    else s << ra.relName << "." << ra.attrName;
     return s;
 }
 
@@ -124,6 +125,8 @@ RC QL_Manager::SelectChecked(int nSelAttrs,
                    const char *relName,
                    int nConditions,
                    const Condition conditions[],
+                   int nAggregator,
+                   const Aggregator aggregators[],
                    int limit,
                    int offset){
     RC rc = OK_RC;
@@ -161,6 +164,55 @@ RC QL_Manager::SelectChecked(int nSelAttrs,
         }
         
     };
+    int valueInt[nAggregator + 1];
+    float valueFloat[nAggregator + 1];
+    for(int i = 0; i < nAggregator; ++i){
+        switch (aggregators[i])
+        {
+        case AVERAGE:
+        case SUM:
+            valueInt[i] = 0;
+            valueFloat[i] = 0;
+            break;
+        case MAX:
+            valueInt[i] = -2147483647; 
+            valueFloat[i] = -1e10;
+            break;
+        case MIN:
+            valueInt[i] = 2147483647;
+            valueFloat[i] = 1e-10;
+        default:
+            break;
+        }
+    }
+    auto calc = [&](char *data){
+        for(int i = 0; i < nAggregator; ++i){
+            if(aggregators[i] == COUNT) continue;
+            int id;
+            smm->GetColumnIDByName(selAttrs[i].attrName, &tableInfo, id);
+            data += smm->CntAttrOffset(&tableInfo, id);
+            switch (aggregators[i])
+            {
+            case AVERAGE:
+            case SUM:
+                valueInt[i] += *((int*)data);
+                valueFloat[i] += *((float*)data);
+                break;
+            case MIN: 
+                valueInt[i] = std::min(*((int*)data), valueInt[i]);
+                valueFloat[i] += std::min(*((float*)data), valueFloat[i]);
+                break;
+            case MAX:
+                valueInt[i] = std::max(*((int*)data), valueInt[i]);
+                valueFloat[i] += std::max(*((float*)data), valueFloat[i]);
+                break;
+            default:
+                break;
+            }
+        }
+    };
+
+    if(nAggregator > 0) useIndex = false;
 
     if(useIndex == false){
         RM_FileScan rmfs;
@@ -175,7 +227,10 @@ RC QL_Manager::SelectChecked(int nSelAttrs,
             func(data, flag);
             if(flag == true){
                 if(limit == -1 ||(num >= offset && num < offset + limit)){
-                    PrintData(tableInfo, nSelAttrs, selAttrs, data);
+                    if(nAggregator == 0){
+                        PrintData(tableInfo, nSelAttrs, selAttrs, data);
+                    }
+                    else calc(data);
                     cnt++;
                 }
                 if(limit != -1 && num >= offset + limit){
@@ -185,6 +240,42 @@ RC QL_Manager::SelectChecked(int nSelAttrs,
             }
         }
         rmfs.CloseScan();
+        if(nAggregator > 0){
+            for(int i = 0; i < nAggregator; ++i){
+                int ID;
+                AttrType attrType;
+                if(aggregators[i] != COUNT){
+                    smm->GetColumnIDByName(selAttrs[i].attrName, &tableInfo, ID);
+                    attrType = tableInfo.columnAttr[i].attrType;
+                }
+                switch (aggregators[i])
+                {
+                case COUNT:
+                    std::cout << "COUNT(" << selAttrs[i] << ") = " << cnt << std::endl;
+                    /* code */
+                    break;
+                case AVERAGE: 
+                    if(attrType == FLOAT) std::cout << "AVG(" << selAttrs[i] << ") = " << 1.0 * valueFloat[i] / cnt << std::endl;
+                    if(attrType == INT) std::cout << "AVG(" << selAttrs[i] << ") = " << 1.0 * valueInt[i] / cnt << std::endl;
+                    break;
+                case MAX: 
+                    if(attrType == FLOAT) std::cout << "MAX(" << selAttrs[i] << ") = " << valueFloat[i] << std::endl;
+                    if(attrType == INT) std::cout << "MAX(" << selAttrs[i] << ") = " << valueInt[i] << std::endl;
+                    break;
+                case MIN: 
+                    if(attrType == FLOAT) std::cout << "MIN(" << selAttrs[i] << ") = " << valueFloat[i] << std::endl;
+                    if(attrType == INT) std::cout << "MIN(" << selAttrs[i] << ") = " << valueInt[i] << std::endl;
+                    break;
+                 case SUM: 
+                    if(attrType == FLOAT) std::cout << "SUM(" << selAttrs[i] << ") = " << valueFloat[i] << std::endl;
+                    if(attrType == INT) std::cout << "SUM(" << selAttrs[i] << ") = " << valueInt[i] << std::endl;
+                    break;
+                
+                default:
+                    break;
+                }
+            }
+        }
     }
     else{
         IX_IndexHandle ixih;
@@ -253,7 +344,7 @@ RC QL_Manager::Select  (int           nSelAttrs,        // # attrs in Select cla
     TRY(CheckColumn(nSelAttrs, selAttrs, nRelations, relations, nConditions, conditions));
 
     if(nRelations == 1){
-        TRY(SelectChecked(nSelAttrs, selAttrs, relations[0], nConditions, conditions,limit,offset));
+        TRY(SelectChecked(nSelAttrs, selAttrs, relations[0], nConditions, conditions, nAggregator, aggregators, limit,offset));
         //TableInfo tableInfo;
     }
     else{
@@ -348,7 +439,6 @@ RC QL_Manager::Insert  (const char  *relName,           // relation to insert in
     //主键约束 TODO
     TRY(SM_Manager::TableExist(relName));
     RC rc = OK_RC;
-    debug("[%s]\n", values[0].data);
     TableInfo tableInfo;
     TRY(smm->GetTableInfo(relName, tableInfo));
     if(nValues != tableInfo.columnNum) return QL_DATA_NOT_MATCH;
@@ -366,11 +456,9 @@ RC QL_Manager::Insert  (const char  *relName,           // relation to insert in
             }
         }
         memcpy(data, values[i].data, tableInfo.columnAttr[i].attrLength);
-        debug("{%s}\n", data);
         data += tableInfo.columnAttr[i].attrLength;
     }
     data -= tableInfo.size;
-        debug("{%s}\n", data);
     rc = CheckPrimaryKey(relName, data);
     if(rc == OK_RC) rc = CheckForeignKeyInsert(relName, data);
     if(rc == OK_RC) rc = InsertAll(tableInfo, data);
@@ -553,6 +641,7 @@ RC QL_Manager::CheckColumn(int  nSelAttrs,
     }
 
     for(int i = 0; i < nSelAttrs; ++i){
+        if(selAttrs[i].attrName == nullptr) continue;
         bool flag = false;
         int ID;
         for(int j = 0; j < nRelations; ++j){

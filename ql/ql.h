@@ -47,6 +47,8 @@ class QL_Manager {
                    const char *relName,
                    int nConditions,
                    const Condition conditions[],
+                   int nAggregator,
+                   const Aggregator aggregators[],
                    int limit,
                    int offset);
   RC CheckForeignKeyInsert(const char *relName, char *data);
