@@ -36,6 +36,9 @@ RC RM_FileHandle::AllocatePage(PF_PageHandle &pageHandle, PageNum &pageNum){
     data += rmFileHeader.bitmapOffset;
     memset(data, 0, rmFileHeader.bitmapSize);
 
+    TRY(pfFileHandle.MarkDirty(pageNum));
+    TRY(pfFileHandle.UnpinPage(pageNum));
+
     return OK_RC;
 }
 
@@ -77,24 +80,22 @@ RC RM_FileHandle::GetFreeSlot(const PF_PageHandle &pageHandle, SlotNum &slotNum,
 RC RM_FileHandle::FindNextSlot(SlotNum &slotNum, PageNum pageNum, char *&data){
     //very strange bug?
     /*static*/ PF_PageHandle pageHandle;
-    debug("FindNextSlot : %d %d (%d %d) %d\n", 
-        slotNum, pageNum, rmFileHeader.recordNumPerPage, 
-        rmFileHeader.recordSize, rmFileHeader.pageNum);
-    //if(slotNum == 0){
-        TRY(pfFileHandle.GetThisPage(pageNum, pageHandle));
+    RC rc = OK_RC;
+    SAFE_TRY(pfFileHandle.GetThisPage(pageNum, pageHandle));
         
     //}
     RM_Slot slot;
     for(int i = slotNum; i < rmFileHeader.recordNumPerPage; ++i){
-        TRY(GetSlot(pageHandle, i, slot));
+        SAFE_TRY(GetSlot(pageHandle, i, slot));
         //debug("(%d %d %d) ?\n", pageNum, i, slot);
         if(slot == true){
             slotNum = i;
             GetDataBySlotNum(pageHandle, slotNum, data);
-            return OK_RC;
+            if(rc == OK_RC) goto safe_exit;
         }
     }
     slotNum = -1; 
+safe_exit:
     TRY(pfFileHandle.UnpinPage(pageNum));
     return OK_RC;
 }
@@ -167,12 +168,8 @@ RC RM_FileHandle::GetRec(const RID &rid, RM_Record &rec) const {
     SlotNum slotNum;
     TRY(rid.GetSlotNum(slotNum));
 
-    debug("GetRec Middle (pageNum = %d) %d\n", pageNum, rmFileHeader.pageNum);
     PF_PageHandle pageHandle;
     TRY(pfFileHandle.GetThisPage(pageNum, pageHandle));
-    bool slot;
-    GetSlot(pageHandle, slotNum, slot);
-    debug("<P%d S%d %d>\n", pageNum, slotNum, slot);
 
     //RM_PageHeader pageHeader;
     char *data;
@@ -186,7 +183,6 @@ safe_exit:
 }
 
 RC RM_FileHandle::InsertRec(const char *pData, RID &rid){
-    debug("InsertRec *((int *)pData) = %d\n", *((int *)pData));
     RC rc = OK_RC;
     PageNum pageNum;
     PF_PageHandle pageHandle;
@@ -340,6 +336,7 @@ bool RM_FileHandle::Comp(AttrType attrType,
 }
 
 bool RM_FileHandle::LikeComp(char *lvalue, char *rvalue){
+    //debug("LikeComp Start [%s]\n", rvalue);
     int lLen = strlen(lvalue);
     int rLen = strlen(rvalue);
     bool vis[lLen + 1][rLen + 1];
@@ -357,5 +354,6 @@ bool RM_FileHandle::LikeComp(char *lvalue, char *rvalue){
             }
         } 
     }
+    //debug("vis[%d][%d] = %d\n", lLen, rLen, vis[lLen][rLen]);
     return vis[lLen][rLen];
 }

@@ -29,7 +29,6 @@ void QL_Manager::PrintTable(TableInfo &tableInfo, int nSelAttrs, const RelAttr s
 }
 
 void QL_Manager::PrintData(TableInfo &tableInfo, int nSelAttrs, const RelAttr selAttrs[], char *data){
-
     if(nSelAttrs == 0){
         for(int i = 0; i < tableInfo.columnNum; ++i){
             std::cout << "\t";
@@ -42,7 +41,7 @@ void QL_Manager::PrintData(TableInfo &tableInfo, int nSelAttrs, const RelAttr se
                 std::cout << *((float*)data);
                 break;
             case STRING:
-                std::cout << *((char*)data);
+                std::cout << (char *)data;
                 break;
 
             default:
@@ -169,7 +168,7 @@ RC QL_Manager::SelectChecked(int nSelAttrs,
         RM_Record rec;
         int num = 0;
         while((rc = rmfs.GetNextRec(rec)) != RM_EOF){
-            if(rc != OK_RC) goto safe_exit;
+            if(rc != OK_RC){ goto safe_exit; }
             char *data;
             rec.GetData(data);
             bool flag = true;
@@ -233,6 +232,8 @@ RC QL_Manager::Select  (int           nSelAttrs,        // # attrs in Select cla
             const char * const relations[], // relations in From clause
             int           nConditions,      // # conditions in Where clause
             const Condition conditions[],
+            int           nAggregator,
+            const Aggregator aggregators[], 
             int limit,
             int offset){
 
@@ -300,7 +301,6 @@ RC QL_Manager::Select  (int           nSelAttrs,        // # attrs in Select cla
         }
         RC rc = OK_RC;
         int cnt = 0;
-        puts("???\n");
         while((rc = rmfs.GetNextRec(rec)) != RM_EOF){
             if(rc != OK_RC) goto safe_exit;
             char *data;
@@ -330,7 +330,7 @@ RC QL_Manager::Select  (int           nSelAttrs,        // # attrs in Select cla
 safe_exit:
         smm->DropTable(name.c_str());
         rmfs.CloseScan();
-        rmm->CloseFile(rmfh);
+        RC trc = rmm->CloseFile(rmfh);
         if(rc == RM_EOF) rc = OK_RC;
         return rc; 
     }
@@ -347,9 +347,8 @@ RC QL_Manager::Insert  (const char  *relName,           // relation to insert in
             const Value values[]){
     //主键约束 TODO
     TRY(SM_Manager::TableExist(relName));
-    std::cout << nValues << std::endl;
-    std::cout << *((int*)values[3].data) << std::endl;
     RC rc = OK_RC;
+    debug("[%s]\n", values[0].data);
     TableInfo tableInfo;
     TRY(smm->GetTableInfo(relName, tableInfo));
     if(nValues != tableInfo.columnNum) return QL_DATA_NOT_MATCH;
@@ -367,13 +366,11 @@ RC QL_Manager::Insert  (const char  *relName,           // relation to insert in
             }
         }
         memcpy(data, values[i].data, tableInfo.columnAttr[i].attrLength);
+        debug("{%s}\n", data);
         data += tableInfo.columnAttr[i].attrLength;
     }
     data -= tableInfo.size;
-    for(int i = 0; i < nValues; ++i){
-
-    }
-    //memcpy(data, &values)
+        debug("{%s}\n", data);
     rc = CheckPrimaryKey(relName, data);
     if(rc == OK_RC) rc = CheckForeignKeyInsert(relName, data);
     if(rc == OK_RC) rc = InsertAll(tableInfo, data);
@@ -853,6 +850,7 @@ RC QL_Manager::InsertAll(TableInfo &tableInfo, char *data){
     TRY(rmm->OpenFile(smm->RMName(tableInfo.name).c_str(), rmfh));
     debug("InsertAll OpenFile\n");
     RID rid;
+
     TRY(rmfh.InsertRec(data, rid));
     TRY(rmm->CloseFile(rmfh));
 
