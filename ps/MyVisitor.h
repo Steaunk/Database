@@ -242,13 +242,25 @@ class MyVisitor:public SQLBaseVisitor{
     virtual antlrcpp::Any visitSelect_table(SQLParser::Select_tableContext *ctx) override {
         int nSelAttrs = ctx->selectors()->selector().size();
         int cntC = 0, cntA = 0;
+        Aggregator *aggr = new Aggregator[nSelAttrs];
         for(auto sel : ctx->selectors()->selector()){
-            if(sel->column() != 0) cntC++;
+            if(sel->aggregator() == nullptr && sel->column() != nullptr) cntC++;
             else{
                 if(sel->aggregator() != nullptr){
-                    
+                    string ag = sel->aggregator()->getText();
+                    if(ag == "COUNT"){
+                        aggr[cntA] = COUNT;
+                    }else if(ag == "AVERAGE"){
+                        aggr[cntA] = AVERAGE;
+                    }else if(ag == "MAX"){
+                        aggr[cntA] = MAX;
+                    }else if(ag == "MIN"){
+                        aggr[cntA] = MIN;
+                    }else if(ag == "SUM"){
+                        aggr[cntA] = SUM;
+                    }
                 }else{
-
+                    aggr[cntA] = COUNT;
                 }
                 cntA++;
             }
@@ -290,6 +302,21 @@ class MyVisitor:public SQLBaseVisitor{
                     strcpy(relAttr[i].attrName, strB[i].c_str());
                     i++;
                 }
+           }else{
+               int i = 0;
+                for(auto sel : ctx->selectors()->selector()){
+                    if(sel->aggregator() == nullptr && sel->column() == nullptr){
+                        ++i;
+                        continue;
+                    }
+                    strA[i] = sel->column()->Identifier(0)->getText();
+                    strB[i] = sel->column()->Identifier(1)->getText();
+                    relAttr[i].relName = (char *)malloc(strA[i].length());
+                    relAttr[i].attrName = (char *)malloc(strB[i].length());
+                    strcpy(relAttr[i].relName, strA[i].c_str());
+                    strcpy(relAttr[i].attrName, strB[i].c_str());
+                    i++;
+                }
            }
         }
         auto offandlim = ctx->Integer();
@@ -302,7 +329,8 @@ class MyVisitor:public SQLBaseVisitor{
             offset = atoi(offandlim[1]->getText().c_str());
         }
         auto retval = visitChildren(ctx);
-        SM_PRINT(qlm->Select(cntC, relAttr, nRelations, relations, size, conditions, limit, offset), "");
+        if(cntC == 0)cntC == cntA;
+        SM_PRINT(qlm->Select(cntC, relAttr, nRelations, relations, size, conditions, cntA, aggr, limit, offset), "");
         return retval;
     }
 
