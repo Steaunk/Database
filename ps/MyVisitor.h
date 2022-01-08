@@ -259,8 +259,11 @@ class MyVisitor:public SQLBaseVisitor{
             strcpy(relations[i], relt[i].c_str());
             i++;
         }
-        int size = ctx->where_and_clause()->where_clause().size();
-        conditions = new Condition[size];
+        int size = 0;
+        if(ctx->where_and_clause() != 0){
+            size = ctx->where_and_clause()->where_clause().size();
+            conditions = new Condition[size + 1];
+        }
         RelAttr relAttr[cntC];
         string strA[cntC];
         string strB[cntC];
@@ -309,6 +312,7 @@ class MyVisitor:public SQLBaseVisitor{
         if(ctx->operate()->Greater() != 0x0) conditions[cnt].op = GT_OP;
         if(ctx->operate()->GreaterEqual() != 0x0) conditions[cnt].op = GE_OP;
         if(ctx->operate()->NotEqual() != 0x0) conditions[cnt].op = NE_OP;
+        if(ctx->operate()->Like() != 0x0) conditions[cnt].op = LIKE;
 
         if(ctx->expression()->column() != 0x0){
             conditions[cnt].rhsAttr.relName = (char *) malloc(ctx->expression()->column()->Identifier(0)->getText().length());

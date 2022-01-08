@@ -1,5 +1,5 @@
 
-// Generated from ./SQL.g4 by ANTLR 4.9.3
+// Generated from /media/tshoigyr/Work/thu/database/database/SQL.g4 by ANTLR 4.9.3
 
 #pragma once
 
@@ -21,8 +21,9 @@ public:
     T__38 = 39, T__39 = 40, T__40 = 41, T__41 = 42, T__42 = 43, T__43 = 44, 
     T__44 = 45, T__45 = 46, T__46 = 47, T__47 = 48, T__48 = 49, EqualOrAssign = 50, 
     Less = 51, LessEqual = 52, Greater = 53, GreaterEqual = 54, NotEqual = 55, 
-    Count = 56, Average = 57, Max = 58, Min = 59, Sum = 60, Null = 61, Identifier = 62, 
-    Integer = 63, String = 64, Float = 65, Whitespace = 66, Annotation = 67
+    Like = 56, Count = 57, Average = 58, Max = 59, Min = 60, Sum = 61, Null = 62, 
+    Identifier = 63, Integer = 64, String = 65, Float = 66, Whitespace = 67, 
+    Annotation = 68
   };
 
   explicit SQLLexer(antlr4::CharStream *input);

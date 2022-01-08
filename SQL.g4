@@ -6,6 +6,7 @@ LessEqual: '<=';
 Greater: '>';
 GreaterEqual: '>=';
 NotEqual: '<>';
+Like: 'LIKE';
 
 Count: 'COUNT';
 Average: 'AVG';
@@ -147,6 +148,7 @@ operate
     | Greater
     | GreaterEqual
     | NotEqual
+    | Like
     ;
 
 
