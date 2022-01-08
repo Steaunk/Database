@@ -47,7 +47,9 @@ class QL_Manager {
                    const char *relName,
                    int nConditions,
                    const Condition conditions[]);
-  
+  RC CheckForeignKeyInsert(const char *relName, char *data);
+  RC CheckForeignKeyDelete(const char *relName, char *data);
+  bool CheckForeignKeyEqual(const char *relNameA, const char *relNameB, int keyNum, int *columnIDA, int *columnIDB, char *dataA);
   bool UseIndex(TableInfo &tableInfo, int nConditions, const Condition conditions[], int &indexNo, int &cid);
   /*RC FindRelName(const char *attrName,
                  int nRelations,
@@ -98,6 +100,7 @@ class QL_Manager {
 #define QL_DUPLICATE_ENTRY (START_QL_WARN + 2)
 #define QL_NOT_UNIQUE_TABLE (START_QL_WARN + 3)
 #define QL_UNKNOW_INDEX (START_QL_WARN + 4)
+#define QL_FOREIGNKEY (START_QL_WARN + 5)
 //#define RM_EOF (START_RM_WARN + 2)
 
 // QL ERR

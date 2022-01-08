@@ -117,6 +117,7 @@ class MyVisitor:public SQLBaseVisitor{
     }
 
     virtual antlrcpp::Any visitForeign_key_field(SQLParser::Foreign_key_fieldContext *ctx) override {
+
         return visitChildren(ctx);
     }
 
@@ -163,7 +164,7 @@ class MyVisitor:public SQLBaseVisitor{
             }
             RC rc = qlm->Insert(s.c_str(), i, value);
             if(rc == OK_RC);
-            else if(rc == QL_DATA_NOT_MATCH || rc == QL_DUPLICATE_ENTRY){
+            else if(rc == QL_DATA_NOT_MATCH || rc == QL_DUPLICATE_ENTRY || rc == QL_FOREIGNKEY){
                 //std::cout << vl->getText() << " : type error\n";
                 cnt_f++;
             }
@@ -339,5 +340,41 @@ class MyVisitor:public SQLBaseVisitor{
         if(rc != OK_RC)SM_PrintError(rc, NULL);
         return visitChildren(ctx);
     }
+    virtual antlrcpp::Any visitAlter_table_add_foreign_key(SQLParser::Alter_table_add_foreign_keyContext *ctx) override {
+        string relName = ctx->Identifier(0)->getText();
+        string foreignName = ctx->Identifier(1)->getText();
+        string refRelName = ctx->Identifier(2)->getText();
+        int num = ctx->identifiers(0)->Identifier().size();
+        AttrInfo *fk = new AttrInfo[num];
+        AttrInfo *rfk = new AttrInfo[num];
 
+        int i = 0;
+        for(auto id : ctx->identifiers(0)->Identifier()){
+            fk[i].attrName = (char *)malloc(id->getText().length());
+            strcpy(fk[i].attrName, id->getText().c_str());
+            ++i;
+        }
+
+        i = 0;
+        for(auto id : ctx->identifiers(1)->Identifier()){
+            rfk[i].attrName = (char *)malloc(id->getText().length());
+            strcpy(rfk[i].attrName, id->getText().c_str());
+            ++i;
+        }
+
+        RC rc = sm->AddForeignKey(foreignName.c_str(), relName.c_str(), refRelName.c_str(), num, fk, rfk);
+        if(rc == OK_RC) std::cout << "Foreign key added\n";
+        else SM_PrintError(rc, relName.c_str());
+        delete[] fk;
+        delete[] rfk;
+        return visitChildren(ctx);
+    }
+    virtual antlrcpp::Any visitAlter_table_drop_foreign_key(SQLParser::Alter_table_drop_foreign_keyContext *ctx) override {
+        string relName = ctx->Identifier(0)->getText();
+        string foreignName = ctx->Identifier(1)->getText();
+        RC rc = sm->DropForeignKey(relName.c_str(), foreignName.c_str());
+        if(rc == OK_RC) std::cout << "Foreign key dropped\n";
+        else SM_PrintError(rc, relName.c_str());
+        return visitChildren(ctx);
+    }
 };

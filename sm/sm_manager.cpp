@@ -37,7 +37,10 @@ RC SM_Manager::DropDb(const char *dbName){
     if(isOpenDb == true){
         chdir("..");
     }
-    if(!fs::exists(dbName)) return SM_DB_NOT_EXISTS;
+    if(!fs::exists(dbName)){
+        chdir(path.c_str());
+        return SM_DB_NOT_EXISTS;
+    }
     //if(isOpenDb == true) return SM_DB_NOT_OPEN;
     fs::remove_all(dbName);
     if(isOpenDb){
@@ -170,6 +173,8 @@ RC SM_Manager::DropTable   (const char *relName){
     for(int i = 0; i < tableInfo.indexNum; ++i)
         TRY(ixm->DestroyIndex(relName, i));
 
+    if(tableInfo.primaryKey.keyNum > 0) TRY(ixm->DestroyIndex(relName, -1));
+
     fs::remove(relName);
     TRY(rmm->DestroyFile(RMName(relName).c_str()));
 
@@ -205,6 +210,26 @@ RC SM_Manager::DescTable(const char *relName){
         }
         if(tableInfo.columnAttr[i].isPrimaryKey) std::cout << "PRI ";
         std::cout << std::endl;
+    }
+
+    std::cout << "\n#### 外键约束\n";
+
+    //debug("tableInfo.foreignNum = %d\n", tableInfo.foreignNum);
+    for(int i = 0; i < tableInfo.foreignNum; ++i){
+        std::cout << tableInfo.foreignKey[i].name << " (";
+        for(int j = 0; j < tableInfo.foreignKey[i].keyNum; ++j){
+            std::cout << tableInfo.columnAttr[tableInfo.foreignKey[i].columnID[j]].name;
+            if(j < tableInfo.foreignKey[i].keyNum - 1) std::cout << ", ";
+        }
+        std::cout << ") REFERENCES " << tableInfo.foreignKey[i].refRelName << " (";
+
+        TableInfo refTableInfo;
+        ReadData(tableInfo.foreignKey[i].refRelName, &refTableInfo);
+        for(int j = 0; j < tableInfo.foreignKey[i].keyNum; ++j){
+            std::cout << refTableInfo.columnAttr[tableInfo.foreignKey[i].refColumnID[j]].name;
+            if(j < tableInfo.foreignKey[i].keyNum - 1) std::cout << ", ";
+        }
+        std::cout << ")\n";
     }
 
     std::cout << "\n总计：" << tableInfo.columnNum << std::endl;
@@ -284,7 +309,8 @@ RC SM_Manager::CreateIndex (const char *relName,                // Create index
         }
     }
     return SM_DB_INDEX_FULL;
-                }
+}
+
 RC SM_Manager::DropIndex   (const char *relName,                // Destroy index
                 const char *attrName){
     if(isOpenDb == false) return SM_DB_NOT_OPEN;
@@ -431,6 +457,134 @@ RC SM_Manager::AddPrimaryKey(const char *relName, int keyNum, const AttrInfo *at
     return OK_RC;
 }
 
+RC SM_Manager::AddForeignKey(const char *foreignName, const char *relName, const char *refRelName, int keyNum, const AttrInfo *foreignKey, const AttrInfo *referenceKey){
+    if(isOpenDb == false) return SM_DB_NOT_OPEN;
+    if(!fs::exists(relName)) return SM_TABLE_NOT_EXISTS;
+    if(!fs::exists(refRelName)) return SM_REF_TABLE_NOT_EXISTS;
+    TableInfo tableInfo, refTableInfo;
+    ReadData(relName, &tableInfo);
+    ReadData(refRelName, &refTableInfo);
+    if(refTableInfo.primaryKey.keyNum != keyNum) return SM_COLUMN_NOT_UNIQUE;
+    //debug("Add ForeignKey unique\n");
+    AttrType attrType[keyNum];
+    int offsetL[keyNum], offsetR[keyNum], attrLength[keyNum];
+    
+    auto &info = tableInfo.foreignKey[tableInfo.foreignNum];
+    strcpy(info.relName, relName);
+    strcpy(info.refRelName, refRelName);
+
+    for(int i = 0; i < keyNum; ++i){
+        int lID, rID;
+        TRY(GetColumnIDByName(foreignKey[i].attrName, &tableInfo, lID));
+        TRY(GetColumnIDByName(referenceKey[i].attrName, &refTableInfo, rID));
+        if(tableInfo.columnAttr[lID].attrType != refTableInfo.columnAttr[rID].attrType ||
+            tableInfo.columnAttr[lID].attrLength != refTableInfo.columnAttr[rID].attrLength) return SM_COLUMN_TYPE_NOT_MATCH;
+        if(refTableInfo.columnAttr[rID].isPrimaryKey == false) return SM_COLUMN_NOT_UNIQUE;
+        offsetL[i] = CntAttrOffset(&tableInfo, lID);
+        offsetR[i] = CntAttrOffset(&refTableInfo, rID);
+        attrLength[i] = tableInfo.columnAttr[lID].attrLength;
+        attrType[i] = tableInfo.columnAttr[lID].attrType;
+
+        info.columnID[i] = lID;
+        info.refColumnID[i] = rID;
+        std::cout << rID;
+    }
+    for(int i = 0; i < tableInfo.foreignNum; ++i){
+        if(strcmp(tableInfo.foreignKey[i].name, foreignName) == 0)
+            return SM_DUPLICATE_NAME;
+    }
+
+    info.keyNum = keyNum;
+    strcpy(info.name, foreignName);
+
+    auto &refInfo = refTableInfo.primaryKey;
+    memcpy(&refInfo.references[refInfo.referenceNum], &info, sizeof(ForeignKey));
+    refInfo.referenceNum++;
+    tableInfo.foreignNum++;
+
+    RM_FileHandle rmfh, rrmfh;
+    RM_FileScan rmfs;
+    rmm->OpenFile(RMName(relName).c_str(), rmfh);
+    rmfs.OpenScan(rmfh, AttrType(0), 0, 0, NO_OP, nullptr);
+    rmm->OpenFile(RMName(refRelName).c_str(), rrmfh);
+
+    debug("AddForeignKey Middle\n");
+    RC rc;
+    RM_Record rec, refrec;
+    IX_IndexHandle ixih;
+    ixm->OpenIndex(refRelName, -1, ixih);
+    int offset = CntAttrOffset(&refTableInfo, refTableInfo.primaryKey.columnID[0]);
+    while((rc = rmfs.GetNextRec(rec)) != RM_EOF){
+        IX_IndexScan ixis;     
+        char *data;
+        rec.GetData(data);
+        debug("AddForeignKey Loop begin %d %d %d\n", *((int *)data), *((int *)(data + 4)), *((int *)(data + 8)));
+        ixis.OpenScan(ixih, EQ_OP, data + offset);
+        RID rid;
+        RC rct;
+        char *refdata;
+        bool flag = false;
+        while((rct = ixis.GetNextEntry(rid)) != IX_EOF){
+            rrmfh.GetRec(rid, refrec);
+            refrec.GetData(refdata);
+            bool notEqual = false;
+            debug("first\n");
+            for(int i = 0; i < keyNum; ++i){
+                debug("offsetL [%d], offsetR [%d] <%d>\n", *(int*)(data+offsetL[i]), *(int*)(data+offsetR[i]), attrLength[i]);
+                if(!RM_FileHandle::Comp(attrType[i], attrLength[i], EQ_OP, data + offsetL[i], refdata + offsetR[i])){
+                    notEqual = true;
+                    break;
+                }
+            }
+            debug("Not Equal = %d\n", notEqual);
+            if(notEqual == false){
+                flag = true;
+            }
+
+        }
+
+        if(flag == false){
+            rc = SM_ENTRY_NOT_MATCH;
+            break;
+        }
+    }
+    if(rc == RM_EOF) rc = OK_RC; 
+    rmm->CloseFile(rmfh);
+    if(rc == OK_RC){
+        WriteData(relName, &tableInfo);
+        WriteData(refRelName, &refTableInfo);
+    }
+    return rc;
+}
+
+RC SM_Manager::DropForeignKey(const char *relName, const char *foreignName){
+    if(isOpenDb == false) return SM_DB_NOT_OPEN;
+    if(!fs::exists(relName)) return SM_TABLE_NOT_EXISTS;
+    TableInfo tableInfo;
+    ReadData(relName, &tableInfo);
+    for(int i = 0; i < tableInfo.foreignNum; ++i){
+        auto &info = tableInfo.foreignKey[i];
+        if(strcmp(info.name, foreignName) == 0){
+            TableInfo refTableInfo;
+            ReadData(info.refRelName, &refTableInfo);
+            for(int j = 0; j < refTableInfo.primaryKey.referenceNum; ++j){
+                auto &refInfo = refTableInfo.primaryKey;
+                if(strcmp(refInfo.references[j].name, info.name) == 0){
+                    memcpy(&refInfo.references[j], &refInfo.references[refInfo.referenceNum - 1], sizeof(ForeignKey));
+                    refInfo.referenceNum--;
+                    break;
+                }
+            }
+            WriteData(info.refRelName, &refTableInfo);
+            memcpy(&info, &tableInfo.foreignKey[tableInfo.foreignNum - 1], sizeof(ForeignKey));
+            tableInfo.foreignNum--;
+            WriteData(relName, &tableInfo);
+            return OK_RC;
+        }
+    }
+    return SM_FOREIGNKEY_NOT_EXISTS;
+}
+
 RC SM_Manager::DropPrimaryKey(const char *relName){
     if(isOpenDb == false) return SM_DB_NOT_OPEN;
     if(!fs::exists(relName)) return SM_TABLE_NOT_EXISTS;
@@ -497,6 +651,11 @@ RC SM_Manager::InnerJoin(const char *relNameA, const char *relNameB){
     }
     this->CreateTable(this->RelNameCat(relNameA,relNameB).c_str(),count,attrs);
     delete[] attrs;
+}
+
+RC SM_Manager::TableExist(const char *relName){
+    if(fs::exists(relName)) return OK_RC;
+    return SM_TABLE_NOT_EXISTS;
 }
 
 /*RC SM_Manager::CheckColumn(cnost char *relName, const char *relName_t, const char *attrName_t){

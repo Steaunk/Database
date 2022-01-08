@@ -62,6 +62,14 @@ class SM_Manager {
                       const AttrInfo *attributes);
 
     RC DropPrimaryKey (const char *relName);
+    RC AddForeignKey (const char *foreignName,
+                      const char *relName, 
+                      const char *refRelName,
+                      int keyNum,
+                      const AttrInfo *foreignKey,
+                      const AttrInfo *referenceKey);
+    RC DropForeignKey (const char *relName, const char *foreignName);
+    
     RC Load        (const char *relName,                // Load utility
                     const char *fileName);
     RC Help        ();                                  // Help for database
@@ -77,6 +85,8 @@ class SM_Manager {
     std::string RelNameCat(const char *relNameA, const char *relNameB); //数据表名字拼接
     std::string AttrNameCat(const char *relName, const char *attrName); //数据表与字段名字拼接
     RC InnerJoin(const char *relNameA, const char *relNameB); //Inner Join
+
+    static RC TableExist(const char *relName);
 };
 
 void SM_PrintError(RC rc, std::string msg);
@@ -100,3 +110,9 @@ void SM_PrintError(RC rc, std::string msg);
 #define SM_DB_WRONG_INDEX (START_SM_ERR - 4) //create a index which is not in column
 #define SM_DB_INDEX_FULL (START_SM_ERR - 5) //index overflow
 #define SM_DB_NO_INDEX (START_SM_ERR - 6) //delete wrong index
+#define SM_REF_TABLE_NOT_EXISTS (START_SM_ERR - 7)
+#define SM_COLUMN_TYPE_NOT_MATCH (START_SM_ERR - 8)
+#define SM_DUPLICATE_NAME (START_SM_ERR - 9)
+#define SM_COLUMN_NOT_UNIQUE (START_SM_ERR - 10)
+#define SM_ENTRY_NOT_MATCH (START_SM_ERR - 11)
+#define SM_FOREIGNKEY_NOT_EXISTS (START_SM_ERR - 12)

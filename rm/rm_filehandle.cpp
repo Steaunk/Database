@@ -64,9 +64,8 @@ RC RM_FileHandle::GetFreeSlot(const PF_PageHandle &pageHandle, SlotNum &slotNum,
     cur_data += rmFileHeader.bitmapOffset;
 
     for(int i = 0; i < rmFileHeader.bitmapSize; ++i){
-        int t = FindZero(*(cur_data + i));
-        if(t != -1 && i * 8 + t <= rmFileHeader.recordNumPerPage){
-            TRY(GetDataBySlotNum(pageHandle, slotNum = i * 8 + t, data));
+        if(*(cur_data + i) == 0){
+            TRY(GetDataBySlotNum(pageHandle, slotNum = i, data));
             return OK_RC;
         }
 
@@ -77,13 +76,14 @@ RC RM_FileHandle::GetFreeSlot(const PF_PageHandle &pageHandle, SlotNum &slotNum,
 
 RC RM_FileHandle::FindNextSlot(SlotNum &slotNum, PageNum pageNum, char *&data){
     //very strange bug?
-    static PF_PageHandle pageHandle;
+    /*static*/ PF_PageHandle pageHandle;
     debug("FindNextSlot : %d %d (%d %d) %d\n", 
         slotNum, pageNum, rmFileHeader.recordNumPerPage, 
         rmFileHeader.recordSize, rmFileHeader.pageNum);
-    if(slotNum == 0){
+    //if(slotNum == 0){
         TRY(pfFileHandle.GetThisPage(pageNum, pageHandle));
-    }
+        
+    //}
     RM_Slot slot;
     for(int i = slotNum; i < rmFileHeader.recordNumPerPage; ++i){
         TRY(GetSlot(pageHandle, i, slot));
@@ -109,8 +109,8 @@ RC RM_FileHandle::GetSlot(const PF_PageHandle &pageHandle, const SlotNum &slotNu
     if(slotNum >= rmFileHeader.recordNumPerPage) return RM_INVALID_RID;
     char *data;
     TRY(pageHandle.GetData(data));
-    data += rmFileHeader.bitmapOffset + slotNum / 8;
-    slot = (*data >> (slotNum % 8)) & 1;
+    data += rmFileHeader.bitmapOffset + slotNum;
+    slot = *(data);
     
     return OK_RC;
 }
@@ -119,9 +119,9 @@ RC RM_FileHandle::SetSlot(const PF_PageHandle &pageHandle, const SlotNum &slotNu
     if(slotNum >= rmFileHeader.recordNumPerPage) return RM_INVALID_RID;
     char *data;
     TRY(pageHandle.GetData(data));
-    data += rmFileHeader.bitmapOffset + slotNum / 8;
-    if(slot == true) *(data) |= 1 << (slotNum % 8);
-    else *(data) &= ~(1 << (slotNum % 8));
+    data += rmFileHeader.bitmapOffset + slotNum;
+    if(slot == true) *(data) = 1;
+    else *(data) = 0;
     
     return OK_RC;
 }
@@ -170,6 +170,9 @@ RC RM_FileHandle::GetRec(const RID &rid, RM_Record &rec) const {
     debug("GetRec Middle (pageNum = %d) %d\n", pageNum, rmFileHeader.pageNum);
     PF_PageHandle pageHandle;
     TRY(pfFileHandle.GetThisPage(pageNum, pageHandle));
+    bool slot;
+    GetSlot(pageHandle, slotNum, slot);
+    debug("<P%d S%d %d>\n", pageNum, slotNum, slot);
 
     //RM_PageHeader pageHeader;
     char *data;
@@ -310,7 +313,6 @@ bool RM_FileHandle::Comp(AttrType attrType,
         if(attrType == INT) flag = (*((int *)lvalue) == *((int *)rvalue));
         else if(attrType == FLOAT) flag = (*((float *)lvalue) == *((float *)rvalue));
         else flag = strncmp((char *)lvalue, (char *)rvalue, attrLength) == 0; 
-        debug("COMP flag = %d (%d %d)\n", flag, *((int *)lvalue), *((int *)rvalue));
         return compOp == NE_OP ? !flag : flag;
 
     case LT_OP:

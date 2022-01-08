@@ -11,10 +11,10 @@
 struct ForeignKey {
     char name[MAX_NAME_LENGTH];
     int keyNum = 0; //联合主键
-    //char father[MAX_NAME_LENGTH]; //
-    int myColumn[MAX_COLUMN_NUM];
-    char foreign[MAX_NAME_LENGTH];
-    int foreignColumn[MAX_COLUMN_NUM];
+    char relName[MAX_NAME_LENGTH]; //
+    int columnID[MAX_COLUMN_NUM];
+    char refRelName[MAX_NAME_LENGTH];
+    int refColumnID[MAX_COLUMN_NUM];
 };
 
 struct PrimaryKey {
@@ -37,7 +37,7 @@ struct ColumnAttr{
     AttrType attrType;            // Type of attribute
     int attrLength = 0;
     bool isPrimaryKey = false;
-    bool isForeignKey = false;  //是否为外键
+    //bool isForeignKey = false;  //是否为外键
     bool hasDefaultValue = false;
 };
 
@@ -51,6 +51,7 @@ struct TableInfo{
 
     PrimaryKey primaryKey;
 
+    int foreignNum = 0;
     ForeignKey foreignKey[MAX_FOREIGN_KEY_NUM];
 
     int indexNum = 0; 

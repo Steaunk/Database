@@ -29,7 +29,7 @@ void SM_PrintError(RC rc, std::string msg = "")
     cerr << "Index already exists\n";
     break;
   case SM_DB_NO_INDEX:
-    cerr << "No such index\n";
+    cerr << "Index doesn't exist\n";
     break;
   /*case SM_COLUMN_NOT_EXSITS:
     cerr << "Column '" << msg << "' doesn't exist\n";
@@ -43,6 +43,27 @@ void SM_PrintError(RC rc, std::string msg = "")
   case SM_DUPLICATE_ENTRY:
     cerr << "Duplicated entry for key\n";
     break;
+
+  case SM_REF_TABLE_NOT_EXISTS:
+    cerr << "Reference Table doesn't exist\n";
+    break;
+  
+  case SM_DUPLICATE_NAME:
+    cerr << "Duplicated name exist\n";
+    break;
+
+  case SM_COLUMN_NOT_UNIQUE:  
+    cerr << "Reference table isn't unique\n";
+    break;
+  
+  case SM_COLUMN_TYPE_NOT_MATCH:
+    cerr << "Column type doesn't match\n";
+    break;
+
+  case SM_ENTRY_NOT_MATCH:
+    cerr << "Entry doesn't match\n";
+    break;
+  
   case OK_RC: 
     cerr << "SM : I'm healthy!\n";
     break;

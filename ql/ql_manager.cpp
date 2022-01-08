@@ -78,16 +78,21 @@ void QL_Manager::PrintData(TableInfo &tableInfo, int nSelAttrs, const RelAttr se
 }
 
 bool QL_Manager::UseIndex(TableInfo &tableInfo, int nConditions, const Condition conditions[], int &indexNo, int &cid){
-    if(tableInfo.primaryKey.keyNum > 0){
+    /*if(tableInfo.primaryKey.keyNum > 0){
         indexNo = -1;
         return true;
-    }
+    }*/
     for(int i = 0; i < nConditions; ++i){
         if(conditions[i].bRhsIsAttr == false){
             int ID;
             if(smm->GetColumnIDByName(conditions[i].lhsAttr.attrName, &tableInfo, ID) != OK_RC) assert(false); //Only use after check columns
-            for(int j = 0; j < tableInfo.indexNum; ++j) if(tableInfo.index[i].columnID == ID){
-                indexNo = i;
+            if(tableInfo.primaryKey.keyNum > 0 && ID == tableInfo.primaryKey.columnID[0]){
+                indexNo = -1;
+                cid = i;
+                return true;
+            }
+            for(int j = 0; j < tableInfo.indexNum; ++j) if(tableInfo.index[j].columnID == ID){
+                indexNo = j;
                 cid = i;
                 return true; 
             }
@@ -244,6 +249,7 @@ RC QL_Manager::Insert  (const char  *relName,           // relation to insert in
             int         nValues,            // # values to insert
             const Value values[]){
     //主键约束 TODO
+    TRY(SM_Manager::TableExist(relName));
     RC rc = OK_RC;
     TableInfo tableInfo;
     TRY(smm->GetTableInfo(relName, tableInfo));
@@ -270,6 +276,7 @@ RC QL_Manager::Insert  (const char  *relName,           // relation to insert in
     }
     //memcpy(data, &values)
     rc = CheckPrimaryKey(relName, data);
+    if(rc == OK_RC) rc = CheckForeignKeyInsert(relName, data);
     if(rc == OK_RC) rc = InsertAll(tableInfo, data);
     free(data);
     return rc;
@@ -289,6 +296,7 @@ RC QL_Manager::Update  (const char *relName,            // relation to update
             const Value rhsValue[],          // value on RHS of =
             int   nConditions,              // # conditions in Where clause
             const Condition conditions[]){
+    TRY(SM_Manager::TableExist(relName));
     TRY(DeleteOrUpdate(relName, nConditions, conditions, nUpdAttr, updAttr, rhsValue));
     return OK_RC;
 }  
@@ -345,6 +353,85 @@ int QL_Manager::CntAttrOffset(TableInfo *tableInfo, int id){
     return offset;
 }
 
+RC QL_Manager::CheckForeignKeyInsert(const char *relName, char *data){
+    TableInfo tableInfo;
+    TRY(smm->GetTableInfo(relName, tableInfo));
+
+    if(tableInfo.foreignNum == 0) return OK_RC;
+
+    for(int i = 0; i < tableInfo.foreignNum; ++i){
+        auto info = tableInfo.foreignKey[i];
+        TableInfo refTableInfo;
+        smm->GetTableInfo(info.refRelName, refTableInfo);
+
+        bool result = CheckForeignKeyEqual(relName, info.refRelName, info.keyNum, info.columnID, info.refColumnID, data);
+
+        if(result == false) return QL_FOREIGNKEY;
+    }
+    return OK_RC;
+}
+
+RC QL_Manager::CheckForeignKeyDelete(const char *relName, char *data){
+    debug("Check Foreign Key Delete\n");
+    TableInfo refTableInfo;
+    TRY(smm->GetTableInfo(relName, refTableInfo));
+
+    if(refTableInfo.primaryKey.keyNum == 0) return OK_RC;
+    if(refTableInfo.primaryKey.referenceNum == 0) return OK_RC;
+
+    for(int i = 0; i < refTableInfo.primaryKey.referenceNum; ++i){
+        auto info = refTableInfo.primaryKey.references[i];
+        TableInfo tableInfo;
+        smm->GetTableInfo(info.relName, tableInfo);
+
+        bool result = CheckForeignKeyEqual(relName, info.relName, info.keyNum, info.refColumnID, info.columnID, data);
+        debug("Result = %d\n", result);
+        if(result == true) return QL_FOREIGNKEY;
+    }
+    return OK_RC;
+}
+
+bool QL_Manager::CheckForeignKeyEqual(const char *relNameA, const char *relNameB, int keyNum, int *columnIDA, int *columnIDB, char *dataA){
+    TableInfo tableInfoA;
+    smm->GetTableInfo(relNameA, tableInfoA);
+    TableInfo tableInfoB;
+    smm->GetTableInfo(relNameB, tableInfoB);
+
+    if(keyNum == 0) return OK_RC;
+
+    RM_FileHandle rmfh;
+    rmm->OpenFile(smm->RMName(relNameB).c_str(), rmfh);
+    RM_FileScan rmfs;
+    rmfs.OpenScan(rmfh, AttrType(0), 0, 0, NO_OP, nullptr);
+    RM_Record trec;
+    char *dataB;
+    RC rc;
+    while((rc = rmfs.GetNextRec(trec)) != RM_EOF){
+        if(rc != OK_RC) break;
+        bool flag = true;
+        trec.GetData(dataB);
+        //debug("dataB <%d %d %d>\n", *((int *)dataB), *((int *)(dataB + 4)), *((int *)(dataB + 8)));
+        for(int i = 0; i < keyNum; ++i){
+            auto &t = tableInfoA.columnAttr[columnIDA[i]];
+            if(RM_FileHandle::Comp(t.attrType, t.attrLength, EQ_OP, 
+                                dataA + CntAttrOffset(&tableInfoA, columnIDA[i]), 
+                                dataB + CntAttrOffset(&tableInfoB, columnIDB[i])) == 0){
+                flag = false;
+                break;
+            }
+        }
+
+       
+        if(flag == true){
+            rmfs.CloseScan();
+            rmm->CloseFile(rmfh);
+            return true;
+        }
+    } 
+    rmfs.CloseScan();
+    rmm->CloseFile(rmfh);
+    return false;
+}
 
 RC QL_Manager::CheckColumn(int  nSelAttrs,
                  const RelAttr selAttrs[],
@@ -529,7 +616,7 @@ RC QL_Manager::DeleteOrUpdate (const char *relName,            // relation to de
         }
     }
 
-
+    useIndex = false;
     if(useIndex){
         assert(false);
     }
@@ -538,10 +625,9 @@ RC QL_Manager::DeleteOrUpdate (const char *relName,            // relation to de
     RM_FileScan rmfs;
     RM_FileHandle rmfh;
     rmm->OpenFile(smm->RMName(relName).c_str(), rmfh);
-    rmfs.OpenScan(rmfh, attrType[0], attrLength[0], 0, NO_OP, nullptr);
+    rmfs.OpenScan(rmfh, attrType[0], 0, 0, NO_OP, nullptr);
     RM_Record rec;
     int cnt = 0;
-    printf("<%d>\n", RM_EOF);
     char *data;
     int cnt_f = 0;
     while((rc = rmfs.GetNextRec(rec)) != RM_EOF){
@@ -550,9 +636,8 @@ RC QL_Manager::DeleteOrUpdate (const char *relName,            // relation to de
             return rc;
         }
         bool flag = true;
-        
         rec.GetData(data);
-        //std::cout << "(" << *((int *)data) << ")" << std::endl;
+        std::cout << "(" << *((int *)data) << ", " << *((int *)(data + 4)) << ")" << std::endl;
         for(int i = 0; i < nConditions; ++i){
             auto &c = conditions[i];
             if(!RM_FileHandle::Comp(attrType[i], attrLength[i], c.op, 
@@ -566,30 +651,35 @@ RC QL_Manager::DeleteOrUpdate (const char *relName,            // relation to de
         }
         if(flag){
             RID rid; rec.GetRid(rid);
+            RC rc = OK_RC;
             if(nUpdAttr == 0){
-                PageNum pageNum;
-                SlotNum slotNum;
-                rid.GetPageNum(pageNum);
-                rid.GetSlotNum(slotNum);
-
-                //debug("Delete [%d %d]\n", pageNum, slotNum);
-                //rmfh.DeleteRec(rid);
-
-                RC rc = DeleteAll(tableInfo, data, rid);//rmfh.DeleteRec(rid);
+                rmm->CloseFile(rmfh);
+                rc = CheckForeignKeyDelete(relName, data);
+                if(rc == OK_RC) rc = DeleteAll(tableInfo, data, rid);//rmfh.DeleteRec(rid);
+                if(rc != OK_RC) cnt_f++;
                 debug("Delete rc = %d\n", rc);
+                rmm->OpenFile(smm->RMName(relName).c_str(), rmfh);
             }
             else {
-                char *new_data = (char *) malloc(tableInfo.size);
-                memcpy(new_data, data, tableInfo.size);
-                for(int i = 0; i < nUpdAttr; ++i){
-                    memcpy(new_data + updAttrOffset[i], rhsValue[i].data, updAttrLength[i]);
+                rmm->CloseFile(rmfh);
+                rc = CheckForeignKeyDelete(relName, data);
+                if(rc == OK_RC){
+                    char *new_data = (char *) malloc(tableInfo.size);
+                    memcpy(new_data, data, tableInfo.size);
+                    for(int i = 0; i < nUpdAttr; ++i){
+                        memcpy(new_data + updAttrOffset[i], rhsValue[i].data, updAttrLength[i]);
+                    }
+                    rc = CheckPrimaryKey(relName, data, nullptr, rid);
+                    if(rc == OK_RC) rc = CheckForeignKeyInsert(relName, new_data);
+                    if(rc != OK_RC) cnt_f++;
+                    else UpdateAll(tableInfo, new_data, data, rid);
+                    free(new_data);
                 }
-                RC rc = CheckPrimaryKey(relName, data, nullptr, rid);
-                if(rc != OK_RC) cnt_f++;
-                else UpdateAll(tableInfo, new_data, data, rid);
-                free(new_data);
+                else cnt_f++;
+                rmm->OpenFile(smm->RMName(relName).c_str(), rmfh);
             }
-            cnt++;
+            if(rc == OK_RC) cnt++;
+            debug("CNT %d\n", cnt);
         }
     }
     rmm->CloseFile(rmfh);
@@ -623,7 +713,6 @@ RC QL_Manager::CheckPrimaryKey(const char *relName, char *data, int *offset, RID
     RM_Record trec;
     char *tdata;
     RC rc;
-    debug("WHST?\n");
     while((rc = ixis.GetNextEntry(rid)) != IX_EOF){
         PageNum pageNum;
         SlotNum slotNum;
@@ -714,7 +803,6 @@ RC QL_Manager::UpdateAll(TableInfo &tableInfo, char *new_data, char *old_data, R
     TRY(rmm->CloseFile(rmfh));
     IX_IndexHandle ixih;
     for(int i = 0; i < MAX_INDEX_NUM; ++i) if(tableInfo.index[i].columnID != -1){
-        debug("InsertAll i = %d\n", i);
         ixm->OpenIndex(tableInfo.name, i, ixih);
         ixih.DeleteEntry(old_data + CntAttrOffset(&tableInfo, tableInfo.index[i].columnID), rid);
         ixih.InsertEntry(new_data + CntAttrOffset(&tableInfo, tableInfo.index[i].columnID), rid);
