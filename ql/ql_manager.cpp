@@ -352,7 +352,7 @@ RC QL_Manager::Select  (int           nSelAttrs,        // # attrs in Select cla
         string name = relations[0];
         for(int i = 1; i < nRelations; ++i){
             debug("test\n");
-            smm->InnerJoin(name.c_str(), relations[i]);
+            //smm->InnerJoin(name.c_str(), relations[i]);
             this->Join(name.c_str(), relations[i]);
             if(i > 1) smm->DropTable(name.c_str());
             name = smm->RelNameCat(name.c_str(), relations[i]);
@@ -1012,7 +1012,6 @@ RC QL_Manager::Join(const char *relNameA, const char *relNameB){
     rmm->OpenFile(smm->RMName(relNameB).c_str(),rmhb);
     RM_FileScan sa,sb;
     sa.OpenScan(rmha,INT,0,0,NO_OP,nullptr);
-    sb.OpenScan(rmhb,INT,0,0,NO_OP,nullptr);
     RC rca,rcb;
     RM_Record ra,rb;
     int lena, lenb;
@@ -1022,6 +1021,7 @@ RC QL_Manager::Join(const char *relNameA, const char *relNameB){
     lena = tablea.size;
     lenb = tableb.size;
     while((rca = sa.GetNextRec(ra)) != RM_EOF){
+        sb.OpenScan(rmhb,INT,0,0,NO_OP,nullptr);
         while((rcb = sb.GetNextRec(rb)) != RM_EOF){
             if(rca != 0 || rcb != 0){
                 sa.CloseScan();
