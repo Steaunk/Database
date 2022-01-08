@@ -72,6 +72,8 @@ class QL_Manager {
               const char * const relations[], // relations in From clause
               int           nConditions,      // # conditions in Where clause
               const Condition conditions[],
+              int           nAggregator,
+              const Aggregator aggregators[],
               int limit = -1,
               int offset = 0);  // conditions in Where clause
    RC Insert (const char  *relName,           // relation to insert into

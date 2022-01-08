@@ -232,6 +232,8 @@ RC QL_Manager::Select  (int           nSelAttrs,        // # attrs in Select cla
             const char * const relations[], // relations in From clause
             int           nConditions,      // # conditions in Where clause
             const Condition conditions[],
+            int           nAggregator,
+            const Aggregator aggregators[], 
             int limit,
             int offset){
 
