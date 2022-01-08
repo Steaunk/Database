@@ -942,7 +942,6 @@ RC QL_Manager::Load(const char *fileName, const char *relName){
             }
             else curs += s[i];
         }
-        std::cout << curs << std::endl;
         int x;
         float f;
         if(cnt < len){
