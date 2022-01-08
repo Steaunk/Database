@@ -82,7 +82,9 @@ class QL_Manager {
               const Condition conditions[]);  // conditions in Where clause
 
    RC InsertIndex(const char *relName, const char *attrName);
-   RC Join(const char *relNameA, const char * relNameB);
+   RC Join(const char *relNameA, const char *relNameB);
+   RC Load(const char *fileName, const char *relName);
+   RC Store(const char *fileName, const char *relName);
    
  private:
   RC DeleteOrUpdate (const char *relName,            // relation to delete from

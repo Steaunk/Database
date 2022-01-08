@@ -3,6 +3,8 @@
 #include "../rm/rm.h"
 #include "../ix/ix.h"
 #include <cstring>
+#include <fstream>
+#include <iostream>
 
 
 ostream &operator<<(ostream &s, const RelAttr &ra){
@@ -771,5 +773,141 @@ RC QL_Manager::Join(const char *relNameA, const char *relNameB){
     rmm->CloseFile(rmh);
     rmm->CloseFile(rmha);
     rmm->CloseFile(rmhb);
+    return OK_RC;
+}
+
+RC QL_Manager::Load(const char *fileName, const char *relName){
+    std::ifstream fin(fileName);
+    string s;
+    TableInfo table;
+    smm->ReadData(relName,&table);
+    int len = table.columnNum;
+    Value *data = new Value [len + 5];
+    for(int i = 0; i < len; ++i){
+        data[i].type = table.columnAttr[i].attrType;
+        data[i].data = new char [table.columnAttr[i].attrLength + 5];
+    }
+    int total = 0;
+    while(getline(fin,s)){
+        string curs = "";
+        int cnt = 0;
+        for(int i = 0; i < s.length(); ++i){
+            if(s[i] == ','){
+                int x;
+                float f;
+                if(cnt < len){
+                    switch (table.columnAttr[cnt].attrType)
+                    {
+                        case INT:
+                            /* code */
+                            x = atoi(curs.c_str());
+                            memcpy(data[cnt].data,&x,sizeof(int));
+                            break;
+                        case FLOAT:
+                            /* code */
+                            f = atof(curs.c_str());
+                            memcpy(data[cnt].data,&f,sizeof(float));
+                            break;
+                        case STRING:
+                            /* code */
+                            memcpy(data[cnt].data,curs.c_str(),sizeof(char) * (curs.length() + 1));
+                            break;
+                        
+                        default:
+                            break;
+                    }
+                }
+                ++cnt;
+                curs = "";
+            }
+            curs += s[i];
+        }
+        int x;
+        float f;
+        if(cnt < len){
+            switch (table.columnAttr[cnt].attrType)
+            {
+                case INT:
+                    /* code */
+                    x = atoi(curs.c_str());
+                    memcpy(data[cnt].data,&x,sizeof(int));
+                    break;
+                case FLOAT:
+                    /* code */
+                    f = atof(curs.c_str());
+                    memcpy(data[cnt].data,&f,sizeof(float));
+                    break;
+                case STRING:
+                    /* code */
+                    memcpy(data[cnt].data,curs.c_str(),sizeof(char) * (curs.length() + 1));
+                    break;
+                
+                default:
+                    break;
+            }
+        }
+        RC rc;
+        rc = Insert(relName,len,data);
+        if(rc){
+            cout << "Incorrect data '" << s << "'\n";
+        }else{
+            ++total;
+        }
+    }
+    for(int i = 0; i < len; ++i){
+        delete[] data[i].data;
+    }
+    delete[] data;
+    cout << "Successfully add " << total << " lines\n";
+    return OK_RC;
+}
+
+RC QL_Manager::Store(const char *fileName, const char *relName){
+    std::ofstream fout(fileName);
+    TableInfo table;
+    smm->ReadData(relName,&table);
+    int len = table.columnNum;
+    RM_FileHandle rmh;
+    rmm->OpenFile(smm->RMName(relName).c_str(),rmh);
+    RM_FileScan rms;
+    rms.OpenScan(rmh,INT,0,0,NO_OP,nullptr);
+    RC rc;
+    RM_Record record;
+    while((rc = rms.GetNextRec(record)) != RM_EOF){
+        if(rc!=0){
+            rms.CloseScan();
+            rmm->CloseFile(rmh);
+            return rc;
+        }
+        char *data;
+        record.GetData(data);
+        for(int i = 0; i < len; ++i){
+            if(i)fout << ",";
+            int x;
+            float f;
+            switch (table.columnAttr[i].attrType)
+            {
+                case INT:
+                    /* code */
+                    fout << *((int*)data);
+                    break;
+                case FLOAT:
+                    /* code */
+                    fout << *((float*)data);
+                    break;
+                case STRING:
+                    /* code */
+                    fout << data;
+                    break;
+                
+                default:
+                    break;
+            }
+            data += table.columnAttr[i].attrLength;
+        }
+        fout << "\n";
+    }
+    rms.CloseScan();
+    rmm->CloseFile(rmh);
     return OK_RC;
 }

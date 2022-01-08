@@ -340,4 +340,18 @@ class MyVisitor:public SQLBaseVisitor{
         return visitChildren(ctx);
     }
 
+    virtual antlrcpp::Any visitLoad_data(SQLParser::Load_dataContext *ctx) override {
+        std::string filename = ctx->String()->getText(), tablename = ctx->Identifier()->getText();
+        RC rc = qlm->Load(filename.c_str(), tablename.c_str());
+        if(rc != OK_RC)
+        return visitChildren(ctx);
+    }
+
+    virtual antlrcpp::Any visitStore_data(SQLParser::Store_dataContext *ctx) override {
+        std::string filename = ctx->String()->getText(), tablename = ctx->Identifier()->getText();
+        RC rc = qlm->Store(filename.c_str(), tablename.c_str());
+        if(rc != OK_RC)
+        return visitChildren(ctx);
+        return visitChildren(ctx);
+    }
 };
