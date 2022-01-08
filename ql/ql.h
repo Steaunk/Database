@@ -46,10 +46,14 @@ class QL_Manager {
                    const RelAttr selAttrs[],
                    const char *relName,
                    int nConditions,
-                   const Condition conditions[]);
+                   const Condition conditions[],
+                   int limit,
+                   int offset);
   RC CheckForeignKeyInsert(const char *relName, char *data);
   RC CheckForeignKeyDelete(const char *relName, char *data);
   bool CheckForeignKeyEqual(const char *relNameA, const char *relNameB, int keyNum, int *columnIDA, int *columnIDB, char *dataA);
+             
+  
   bool UseIndex(TableInfo &tableInfo, int nConditions, const Condition conditions[], int &indexNo, int &cid);
   /*RC FindRelName(const char *attrName,
                  int nRelations,
@@ -84,6 +88,9 @@ class QL_Manager {
               const Condition conditions[]);  // conditions in Where clause
 
    RC InsertIndex(const char *relName, const char *attrName);
+   RC Join(const char *relNameA, const char *relNameB);
+   RC Load(const char *fileName, const char *relName);
+   RC Store(const char *fileName, const char *relName);
    
  private:
   RC DeleteOrUpdate (const char *relName,            // relation to delete from

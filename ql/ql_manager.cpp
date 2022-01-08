@@ -3,6 +3,8 @@
 #include "../rm/rm.h"
 #include "../ix/ix.h"
 #include <cstring>
+#include <fstream>
+#include <iostream>
 
 
 ostream &operator<<(ostream &s, const RelAttr &ra){
@@ -122,7 +124,9 @@ RC QL_Manager::SelectChecked(int nSelAttrs,
                    const RelAttr selAttrs[],
                    const char *relName,
                    int nConditions,
-                   const Condition conditions[]){
+                   const Condition conditions[],
+                   int limit,
+                   int offset){
     RC rc = OK_RC;
 
     TableInfo tableInfo;
@@ -163,6 +167,7 @@ RC QL_Manager::SelectChecked(int nSelAttrs,
         RM_FileScan rmfs;
         rmfs.OpenScan(rmfh, AttrType(0), 0, 0, NO_OP, nullptr);
         RM_Record rec;
+        int num = 0;
         while((rc = rmfs.GetNextRec(rec)) != RM_EOF){
             if(rc != OK_RC) goto safe_exit;
             char *data;
@@ -170,8 +175,14 @@ RC QL_Manager::SelectChecked(int nSelAttrs,
             bool flag = true;
             func(data, flag);
             if(flag == true){
-                PrintData(tableInfo, nSelAttrs, selAttrs, data);
-                cnt++;
+                if(limit == -1 ||(num >= offset && num < offset + limit)){
+                    PrintData(tableInfo, nSelAttrs, selAttrs, data);
+                    cnt++;
+                }
+                if(limit != -1 && num >= offset + limit){
+                    break;
+                }
+                ++num;
             }
         }
         rmfs.CloseScan();
@@ -183,6 +194,7 @@ RC QL_Manager::SelectChecked(int nSelAttrs,
         ixis.OpenScan(ixih, conditions[cid].op, conditions[cid].rhsValue.data);//rmfh, AttrType(0), 0, 0, NO_OP, nullptr);
         RM_Record rec;
         RID rid;
+        int num = 0;
         while((rc = ixis.GetNextEntry(rid)) != IX_EOF){
             debug("RC middle rc = %d\n", rc);
             if(rc != OK_RC) goto safe_exit;
@@ -193,8 +205,14 @@ RC QL_Manager::SelectChecked(int nSelAttrs,
             bool flag = true;
             func(data, flag);
             if(flag == true){
-                PrintData(tableInfo, nSelAttrs, selAttrs, data);
-                cnt++;
+                if(limit == -1 ||(num >= offset && num < offset + limit)){
+                    PrintData(tableInfo, nSelAttrs, selAttrs, data);
+                    cnt++;
+                }
+                if(limit != -1 && num >= offset + limit){
+                    break;
+                }
+                ++num;
             }
         }
         //ixis.CloseScan();
@@ -234,7 +252,7 @@ RC QL_Manager::Select  (int           nSelAttrs,        // # attrs in Select cla
     TRY(CheckColumn(nSelAttrs, selAttrs, nRelations, relations, nConditions, conditions));
 
     if(nRelations == 1){
-        TRY(SelectChecked(nSelAttrs, selAttrs, relations[0], nConditions, conditions));
+        TRY(SelectChecked(nSelAttrs, selAttrs, relations[0], nConditions, conditions,limit,offset));
         //TableInfo tableInfo;
     }
         //TRY(smm->GetTableInfo())
@@ -250,6 +268,8 @@ RC QL_Manager::Insert  (const char  *relName,           // relation to insert in
             const Value values[]){
     //主键约束 TODO
     TRY(SM_Manager::TableExist(relName));
+    std::cout << nValues << std::endl;
+    std::cout << *((int*)values[3].data) << std::endl;
     RC rc = OK_RC;
     TableInfo tableInfo;
     TRY(smm->GetTableInfo(relName, tableInfo));
@@ -815,5 +835,193 @@ RC QL_Manager::UpdateAll(TableInfo &tableInfo, char *new_data, char *old_data, R
         ixih.InsertEntry(new_data + CntAttrOffset(&tableInfo, tableInfo.primaryKey.columnID[0]), rid);
         ixm->CloseIndex(ixih);
     }
+    return OK_RC;
+}
+
+RC QL_Manager::Join(const char *relNameA, const char *relNameB){
+    smm->InnerJoin(relNameA, relNameB);
+    RM_FileHandle rmh,rmha,rmhb;
+    rmm->OpenFile(smm->RMName(smm->RelNameCat(relNameA,relNameB).c_str()).c_str(), rmh);
+    rmm->OpenFile(smm->RMName(relNameA).c_str(),rmha);
+    rmm->OpenFile(smm->RMName(relNameB).c_str(),rmhb);
+    RM_FileScan sa,sb;
+    sa.OpenScan(rmha,INT,0,0,NO_OP,nullptr);
+    sb.OpenScan(rmhb,INT,0,0,NO_OP,nullptr);
+    RC rca,rcb;
+    RM_Record ra,rb;
+    int lena, lenb;
+    TableInfo tablea,tableb;
+    smm->ReadData(relNameA,&tablea);
+    smm->ReadData(relNameB,&tableb);
+    lena = tablea.size;
+    lenb = tableb.size;
+    while((rca = sa.GetNextRec(ra)) != RM_EOF){
+        while((rcb = sb.GetNextRec(rb)) != RM_EOF){
+            if(rca != 0 || rcb != 0){
+                sa.CloseScan();
+                sb.CloseScan();
+                rmm->CloseFile(rmh);
+                rmm->CloseFile(rmha);
+                rmm->CloseFile(rmhb);
+                return rca == 0?rcb:rca;
+            }
+            RID temp;
+            char *dataa,*datab;
+            ra.GetData(dataa);
+            rb.GetData(datab);
+            char *data = new char [lena+lenb+5];
+            memcpy(data,dataa,sizeof(char) * lena);
+            memcpy(data+lena,datab,sizeof(char) * lenb);
+            rmh.InsertRec(data,temp);
+        }
+    }
+    sa.CloseScan();
+    sb.CloseScan();
+    rmm->CloseFile(rmh);
+    rmm->CloseFile(rmha);
+    rmm->CloseFile(rmhb);
+    return OK_RC;
+}
+
+RC QL_Manager::Load(const char *fileName, const char *relName){
+    string fs = fileName;
+    fs = fs.substr(1,fs.length()-2);
+    // fs = "../.."+fs;
+    std::ifstream fin(fs);
+    string s;
+    TableInfo table;
+    smm->ReadData(relName,&table);
+    int len = table.columnNum;
+    Value *data = new Value [len + 5];
+    for(int i = 0; i < len; ++i){
+        data[i].type = table.columnAttr[i].attrType;
+        data[i].data = new char [table.columnAttr[i].attrLength + 5];
+    }
+    int total = 0;
+    while(getline(fin,s)){
+        string curs = "";
+        int cnt = 0;
+        for(int i = 0; i < s.length(); ++i){
+            if(s[i] == ','){
+                int x;
+                float f;
+                if(cnt < len){
+                    switch (table.columnAttr[cnt].attrType)
+                    {
+                        case INT:
+                            /* code */
+                            x = atoi(curs.c_str());
+                            memcpy(data[cnt].data,&x,sizeof(int));
+                            break;
+                        case FLOAT:
+                            /* code */
+                            f = atof(curs.c_str());
+                            memcpy(data[cnt].data,&f,sizeof(float));
+                            break;
+                        case STRING:
+                            /* code */
+                            memcpy(data[cnt].data,curs.c_str(),sizeof(char) * (curs.length() + 1));
+                            break;
+                        
+                        default:
+                            break;
+                    }
+                }
+                ++cnt;
+                curs = "";
+            }
+            else curs += s[i];
+        }
+        std::cout << curs << std::endl;
+        int x;
+        float f;
+        if(cnt < len){
+            switch (table.columnAttr[cnt].attrType)
+            {
+                case INT:
+                    /* code */
+                    x = atoi(curs.c_str());
+                    memcpy(data[cnt].data,&x,sizeof(int));
+                    break;
+                case FLOAT:
+                    /* code */
+                    f = atof(curs.c_str());
+                    memcpy(data[cnt].data,&f,sizeof(float));
+                    break;
+                case STRING:
+                    /* code */
+                    memcpy(data[cnt].data,curs.c_str(),sizeof(char) * (curs.length() + 1));
+                    break;
+                
+                default:
+                    break;
+            }
+        }
+        RC rc;
+        rc = Insert(relName,len,data);
+        if(rc){
+            cout << "Incorrect data '" << s << "'\n";
+        }else{
+            ++total;
+        }
+    }
+    for(int i = 0; i < len; ++i){
+        delete[] data[i].data;
+    }
+    delete[] data;
+    cout << "Successfully add " << total << " lines\n";
+    return OK_RC;
+}
+
+RC QL_Manager::Store(const char *fileName, const char *relName){
+    string fs = fileName;
+    fs = fs.substr(1,fs.length()-2);
+    // fs = "../.."+fs;
+    std::ofstream fout(fs);
+    TableInfo table;
+    smm->ReadData(relName,&table);
+    int len = table.columnNum;
+    RM_FileHandle rmh;
+    rmm->OpenFile(smm->RMName(relName).c_str(),rmh);
+    RM_FileScan rms;
+    rms.OpenScan(rmh,INT,0,0,NO_OP,nullptr);
+    RC rc;
+    RM_Record record;
+    while((rc = rms.GetNextRec(record)) != RM_EOF){
+        if(rc!=0){
+            rms.CloseScan();
+            rmm->CloseFile(rmh);
+            return rc;
+        }
+        char *data;
+        record.GetData(data);
+        for(int i = 0; i < len; ++i){
+            if(i)fout << ",";
+            int x;
+            float f;
+            switch (table.columnAttr[i].attrType)
+            {
+                case INT:
+                    /* code */
+                    fout << *((int*)data);
+                    break;
+                case FLOAT:
+                    /* code */
+                    fout << *((float*)data);
+                    break;
+                case STRING:
+                    /* code */
+                    fout << data;
+                    break;
+                
+                default:
+                    break;
+            }
+            data += table.columnAttr[i].attrLength;
+        }
+        fout << "\n";
+    }
+    rms.CloseScan();
+    rmm->CloseFile(rmh);
     return OK_RC;
 }

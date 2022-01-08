@@ -651,6 +651,7 @@ RC SM_Manager::InnerJoin(const char *relNameA, const char *relNameB){
     }
     this->CreateTable(this->RelNameCat(relNameA,relNameB).c_str(),count,attrs);
     delete[] attrs;
+    return OK_RC;
 }
 
 RC SM_Manager::TableExist(const char *relName){
