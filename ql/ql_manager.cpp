@@ -119,7 +119,9 @@ RC QL_Manager::SelectChecked(int nSelAttrs,
                    const RelAttr selAttrs[],
                    const char *relName,
                    int nConditions,
-                   const Condition conditions[]){
+                   const Condition conditions[],
+                   int limit,
+                   int offset){
     RC rc = OK_RC;
 
     TableInfo tableInfo;
@@ -160,6 +162,7 @@ RC QL_Manager::SelectChecked(int nSelAttrs,
         RM_FileScan rmfs;
         rmfs.OpenScan(rmfh, AttrType(0), 0, 0, NO_OP, nullptr);
         RM_Record rec;
+        int num = 0;
         while((rc = rmfs.GetNextRec(rec)) != RM_EOF){
             if(rc != OK_RC) goto safe_exit;
             char *data;
@@ -167,8 +170,14 @@ RC QL_Manager::SelectChecked(int nSelAttrs,
             bool flag = true;
             func(data, flag);
             if(flag == true){
-                PrintData(tableInfo, nSelAttrs, selAttrs, data);
-                cnt++;
+                if(limit == -1 ||(num >= offset && num < offset + limit)){
+                    PrintData(tableInfo, nSelAttrs, selAttrs, data);
+                    cnt++;
+                }
+                if(limit != -1 && num >= offset + limit){
+                    break;
+                }
+                ++num;
             }
         }
         rmfs.CloseScan();
@@ -180,6 +189,7 @@ RC QL_Manager::SelectChecked(int nSelAttrs,
         ixis.OpenScan(ixih, conditions[cid].op, conditions[cid].rhsValue.data);//rmfh, AttrType(0), 0, 0, NO_OP, nullptr);
         RM_Record rec;
         RID rid;
+        int num = 0;
         while((rc = ixis.GetNextEntry(rid)) != IX_EOF){
             debug("RC middle rc = %d\n", rc);
             if(rc != OK_RC) goto safe_exit;
@@ -190,8 +200,14 @@ RC QL_Manager::SelectChecked(int nSelAttrs,
             bool flag = true;
             func(data, flag);
             if(flag == true){
-                PrintData(tableInfo, nSelAttrs, selAttrs, data);
-                cnt++;
+                if(limit == -1 ||(num >= offset && num < offset + limit)){
+                    PrintData(tableInfo, nSelAttrs, selAttrs, data);
+                    cnt++;
+                }
+                if(limit != -1 && num >= offset + limit){
+                    break;
+                }
+                ++num;
             }
         }
         //ixis.CloseScan();
@@ -231,7 +247,7 @@ RC QL_Manager::Select  (int           nSelAttrs,        // # attrs in Select cla
     TRY(CheckColumn(nSelAttrs, selAttrs, nRelations, relations, nConditions, conditions));
 
     if(nRelations == 1){
-        TRY(SelectChecked(nSelAttrs, selAttrs, relations[0], nConditions, conditions));
+        TRY(SelectChecked(nSelAttrs, selAttrs, relations[0], nConditions, conditions,limit,offset));
         //TableInfo tableInfo;
     }
         //TRY(smm->GetTableInfo())
@@ -246,6 +262,8 @@ RC QL_Manager::Insert  (const char  *relName,           // relation to insert in
             int         nValues,            // # values to insert
             const Value values[]){
     //主键约束 TODO
+    std::cout << nValues << std::endl;
+    std::cout << *((int*)values[3].data) << std::endl;
     RC rc = OK_RC;
     TableInfo tableInfo;
     TRY(smm->GetTableInfo(relName, tableInfo));
@@ -778,7 +796,10 @@ RC QL_Manager::Join(const char *relNameA, const char *relNameB){
 }
 
 RC QL_Manager::Load(const char *fileName, const char *relName){
-    std::ifstream fin(fileName);
+    string fs = fileName;
+    fs = fs.substr(1,fs.length()-2);
+    // fs = "../.."+fs;
+    std::ifstream fin(fs);
     string s;
     TableInfo table;
     smm->ReadData(relName,&table);
@@ -821,8 +842,9 @@ RC QL_Manager::Load(const char *fileName, const char *relName){
                 ++cnt;
                 curs = "";
             }
-            curs += s[i];
+            else curs += s[i];
         }
+        std::cout << curs << std::endl;
         int x;
         float f;
         if(cnt < len){
@@ -864,7 +886,10 @@ RC QL_Manager::Load(const char *fileName, const char *relName){
 }
 
 RC QL_Manager::Store(const char *fileName, const char *relName){
-    std::ofstream fout(fileName);
+    string fs = fileName;
+    fs = fs.substr(1,fs.length()-2);
+    // fs = "../.."+fs;
+    std::ofstream fout(fs);
     TableInfo table;
     smm->ReadData(relName,&table);
     int len = table.columnNum;

@@ -54,7 +54,7 @@ RC RM_FileScan::GetNextRec(RM_Record &rec){
     }
     while(notFound);
     
-    debug("GetNextRec *data : %d\n", *((int *)(data+4)));
+    debug("GetNextRec *data : %d\n", *((int *)(data+34)));
     rec.SetData(data);
     rec.SetRid(RID(curPageNum, curSlotNum));
 	return OK_RC;

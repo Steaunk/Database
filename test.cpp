@@ -4,11 +4,8 @@
 #include<fstream>
 using namespace std;
 int main(){
-    ifstream file("test.cpp");
-    int x;
-    string s;
-    while(getline(file,s)){
-        cout << s << endl;
-    }
+    string s = "2333 23333";
+    char *y = "2333 23333\n35";
+    cout << y << endl;
     return 0;
 }

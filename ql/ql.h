@@ -46,7 +46,9 @@ class QL_Manager {
                    const RelAttr selAttrs[],
                    const char *relName,
                    int nConditions,
-                   const Condition conditions[]);
+                   const Condition conditions[],
+                   int limit,
+                   int offset);
   
   bool UseIndex(TableInfo &tableInfo, int nConditions, const Condition conditions[], int &indexNo, int &cid);
   /*RC FindRelName(const char *attrName,

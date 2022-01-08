@@ -245,6 +245,9 @@ class MyVisitor:public SQLBaseVisitor{
             if(sel->column() != 0) cntC++;
             else cntA++; 
         }
+        if(nSelAttrs == 0){
+            cntC = cntA = 0;
+        }
         int nRelations = ctx->identifiers()->Identifier().size();
         char *relations[nRelations];
         string relt[nRelations];
@@ -278,8 +281,17 @@ class MyVisitor:public SQLBaseVisitor{
                 }
            }
         }
+        auto offandlim = ctx->Integer();
+        int limit=-1,offset=0;
+        //std::cout << "size of integer" << offandlim.size() << std::endl;
+        if(offandlim.size() > 0){
+            limit = atoi(offandlim[0]->getText().c_str());
+        }
+        if(offandlim.size() > 1){
+            offset = atoi(offandlim[1]->getText().c_str());
+        }
         auto retval = visitChildren(ctx);
-        SM_PRINT(qlm->Select(cntC, relAttr, nRelations, relations, size, conditions), "");
+        SM_PRINT(qlm->Select(cntC, relAttr, nRelations, relations, size, conditions, limit, offset), "");
         return retval;
     }
 
@@ -343,15 +355,14 @@ class MyVisitor:public SQLBaseVisitor{
     virtual antlrcpp::Any visitLoad_data(SQLParser::Load_dataContext *ctx) override {
         std::string filename = ctx->String()->getText(), tablename = ctx->Identifier()->getText();
         RC rc = qlm->Load(filename.c_str(), tablename.c_str());
-        if(rc != OK_RC)
+        if(rc != OK_RC);
         return visitChildren(ctx);
     }
 
     virtual antlrcpp::Any visitStore_data(SQLParser::Store_dataContext *ctx) override {
         std::string filename = ctx->String()->getText(), tablename = ctx->Identifier()->getText();
         RC rc = qlm->Store(filename.c_str(), tablename.c_str());
-        if(rc != OK_RC)
-        return visitChildren(ctx);
+        if(rc != OK_RC);
         return visitChildren(ctx);
     }
 };
