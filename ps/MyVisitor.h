@@ -244,7 +244,14 @@ class MyVisitor:public SQLBaseVisitor{
         int cntC = 0, cntA = 0;
         for(auto sel : ctx->selectors()->selector()){
             if(sel->column() != 0) cntC++;
-            else cntA++; 
+            else{
+                if(sel->aggregator() != nullptr){
+                    
+                }else{
+
+                }
+                cntA++;
+            }
         }
         if(nSelAttrs == 0){
             cntC = cntA = 0;
