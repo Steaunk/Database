@@ -1,4 +1,5 @@
 #pragma once
+#include <ctime>
 #include "SQLBaseVisitor.h"
 #include "../sm/sm.h"
 #include "../ql/ql.h"
@@ -21,6 +22,15 @@ class MyVisitor:public SQLBaseVisitor{
     public:
     MyVisitor():sm(nullptr){}
     MyVisitor(SM_Manager &smm, QL_Manager &qlm):sm(&smm), qlm(&qlm){}
+  virtual antlrcpp::Any visitProgram(SQLParser::ProgramContext *ctx) override {
+	  clock_t start,end;　　　//定义clock_t变量
+start = clock();  　　　//开始时间
+auto w = visitChildren(ctx);
+	  end = clock();
+	  cout<<"time = "<<double(end-start)/CLOCKS_PER_SEC<<"s"<<endl;
+	return w;
+  }
+
 
     virtual antlrcpp::Any visitCreate_db(SQLParser::Create_dbContext *ctx) override {
         std::string s = ctx->Identifier()->getSymbol()->getText();

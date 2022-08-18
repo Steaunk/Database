@@ -1,13 +1,13 @@
 .vscode
 
-##cmake
+## CMake
 build
 **/Makefile
 **/CMakeFiles
 **/cmake_install.cmake
 **/CMakeCache.txt
 
-##ctest
+## CTest
 **/Testing
 **/*.sql
 **/CTestTestfile.cmake
@@ -16,3 +16,7 @@ database
 
 **/*.o
 **/*.a
+
+*.swp
+
+.DS_Store
